@@ -16,6 +16,8 @@ import { CustomButton } from '../components/CustomButton';
 import { ProgressBar } from '../components/ProgressBar';
 import { SmoothContainer } from '../components/SmoothContainer';
 import { Animated, Easing } from 'react-native';
+import { FoodTrackingService } from '../services/api/foodTracking.service';
+import { useEffect } from 'react';
 
 type FoodItem = {
   id: string;
@@ -32,12 +34,57 @@ export const FoodTracking = ({ navigation }: MainTabScreenProps<'FoodTracking'>)
   const [foodInput, setFoodInput] = useState('');
   const [isAddFoodVisible, setIsAddFoodVisible] = useState(false);
   const animatedHeight = useState(new Animated.Value(0))[0];
+  const [nutrients, setNutrients] = useState({
+    calories: 0,
+    carbohydrates: 0,
+    proteins: 0,
+    fats: 0,
+  });
+  const [isLoading, setIsLoading] = useState(true);
 
-  const handleAddFood = () => {
-    // Placeholder for adding food logic
-    console.log('Food added:', foodInput);
-    setFoodInput('');
+  const handleAddFood = async () => {
+    try {
+      if (!foodInput.trim()) return;
+      
+      const newFood = await FoodTrackingService.addFoodEntry({
+        name: foodInput,
+        calories: 0,
+        carbohydrates: 0,
+        proteins: 0,
+        fats: 0,
+        time: new Date(),
+      });
+  
+      setMeals(prevMeals => [...prevMeals, newFood]);
+      setFoodInput('');
+      toggleAddFood();
+  
+      // Refresh nutrients
+      const dailyNutrients = await FoodTrackingService.getDailyNutrients(new Date());
+      setNutrients(dailyNutrients);
+    } catch (error) {
+      console.error('Error adding food:', error);
+    }
   };
+
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        setIsLoading(true);
+        const entries = await FoodTrackingService.getDailyEntries(new Date());
+        setMeals(entries);
+        
+        const dailyNutrients = await FoodTrackingService.getDailyNutrients(new Date());
+        setNutrients(dailyNutrients);
+      } catch (error) {
+        console.error('Error loading food data:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+  
+    loadData();
+  }, []);
 
   const toggleAddFood = () => {
     setIsAddFoodVisible(!isAddFoodVisible);
@@ -109,15 +156,29 @@ export const FoodTracking = ({ navigation }: MainTabScreenProps<'FoodTracking'>)
   
         <SmoothContainer>
           <Text style={styles.sectionTitle}>Macronutrients</Text>
-          <ProgressBar progress={60} color="#9c27b0" label="Proteins" />
-          <ProgressBar progress={80} color="#4caf50" label="Carbs" />
-          <ProgressBar progress={95} color="#ffeb3b" label="Fats" />
+          <ProgressBar 
+            progress={(nutrients.proteins / 150) * 100} 
+            color="#9c27b0" 
+            label="Proteins" 
+          />
+          <ProgressBar 
+            progress={(nutrients.carbohydrates / 300) * 100} 
+            color="#4caf50" 
+            label="Carbs" 
+          />
+          <ProgressBar 
+            progress={(nutrients.fats / 70) * 100} 
+            color="#ffeb3b" 
+            label="Fats" 
+          />
         </SmoothContainer>
   
         <SmoothContainer style={styles.summary}>
           <View style={styles.calorieInfo}>
             <Text style={styles.calorieTitle}>Calories Today</Text>
-            <Text style={styles.calorieValue}>1,200 / 2,000</Text>
+            <Text style={styles.calorieValue}>
+              {nutrients.calories.toLocaleString()} / 2,000
+            </Text>
           </View>
         </SmoothContainer>
   

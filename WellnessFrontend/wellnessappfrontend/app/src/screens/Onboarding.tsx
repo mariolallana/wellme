@@ -14,6 +14,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { RootStackScreenProps } from '../navigation/types';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 type GoalOption = {
   id: string;
@@ -50,12 +51,13 @@ export const Onboarding = ({ navigation }: RootStackScreenProps<'Onboarding'>) =
     setFormData(prev => ({ ...prev, [key]: value }));
   };
 
-  const handleNext = () => {
+  const handleNext = async () => {
     if (step < 4) {
       setStep(step + 1);
     } else {
-      // Save data and navigate to main app
+      // Save data and mark onboarding as completed
       console.log('Onboarding completed:', formData);
+      await AsyncStorage.setItem('onboardingCompleted', 'true');
       navigation.navigate('MainTabs');
     }
   };

@@ -11,23 +11,24 @@ import {
   Platform,
 } from 'react-native';
 import { AuthStackScreenProps } from '../navigation/types';
+import { AuthService } from '../services/api/auth.service';
 
 export const Login = ({ navigation }: AuthStackScreenProps<'Login'>) => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [error, setError] = useState('');
   
-    const handleLogin = () => {
-      const fakeEmail = 'test@example.com';
-      const fakePassword = 'password123';
-    
-      if (email === fakeEmail && password === fakePassword) {
-        console.log('Login successful');
-        navigation.navigate("MainTabs", { screen: "Home" });  
-    } else {
-      console.log('Invalid credentials');
-      // Optionally, you can show an alert or some feedback to the user
-    }
-  };
+    const handleLogin = async () => {
+        try {
+          const success = await AuthService.login(email, password);
+          if (!success) {
+            setError('Invalid credentials');
+          }
+        } catch (error) {
+          console.error('Login error:', error);
+          setError('An error occurred during login');
+        }
+      };
 
   return (
     <SafeAreaView style={styles.container}>

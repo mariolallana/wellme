@@ -3,6 +3,8 @@ import cors from 'cors';
 import mongoose from 'mongoose';
 import dotenv from 'dotenv';
 import { userRouter } from './routes/userRoutes';
+import { foodTrackingRouter } from './routes/foodTracking.routes';
+
 
 dotenv.config();
 
@@ -29,6 +31,7 @@ mongoose.connect(MONGODB_URI)
     });
 
     app.use('/api/users', userRouter);
+    app.use('/api/food-tracking', foodTrackingRouter);
 
     // Start the server
     app.listen(PORT, () => {

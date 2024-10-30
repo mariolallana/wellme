@@ -1,29 +1,33 @@
 import { Request, Response, NextFunction } from 'express';
-import jwt, { JwtPayload } from 'jsonwebtoken';
+import jwt from 'jsonwebtoken';
 
-// Define a custom request type
 export interface AuthRequest extends Request {
-    user?: {
-        userId: string;
-    };
+  user?: {
+    id: string;
+  };
 }
 
-export const authenticateToken = (req: AuthRequest, res: Response, next: NextFunction) => {
-  const authHeader = req.headers['authorization'];
-  const token = authHeader && authHeader.split(' ')[1];
+export const authenticateUser = async (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const token = req.header('Authorization')?.replace('Bearer ', '');
 
-  if (!token) {
-    return res.status(401).json({ message: 'Access denied, no token provided' });
-  }
-
-  jwt.verify(token, process.env.JWT_SECRET as string, (err, decoded) => {
-    if (err) {
-      return res.status(403).json({ message: 'Invalid token' });
+    if (!token) {
+      throw new Error();
     }
-    const user = decoded as JwtPayload;
-    req.user = {
-      userId: user.userId
-    };
+
+    const secret = process.env.JWT_SECRET;
+    if (!secret) {
+      throw new Error('JWT_SECRET is not defined');
+    }
+
+    const decoded = jwt.verify(token, secret) as { userId: string };
+    req.user = { id: decoded.userId };
     next();
-  });
+  } catch (error) {
+    res.status(401).json({ error: 'Please authenticate' });
+  }
 };
