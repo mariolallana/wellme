@@ -11,10 +11,15 @@ import {
   Dimensions,
   KeyboardAvoidingView,
   Platform,
+  Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { RootStackScreenProps } from '../navigation/types';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { ProfileService } from '../services/api/profile.service';
+import { ProfileResponse, OnboardingFormData } from '../services/api/types';
+
+
 
 type GoalOption = {
   id: string;
@@ -36,16 +41,16 @@ const ACTIVITY_LEVELS = [
 ];
 
 export const Onboarding = ({ navigation }: RootStackScreenProps<'Onboarding'>) => {
-  const [step, setStep] = useState(1);
-  const [formData, setFormData] = useState({
-    name: '',
-    age: '',
-    gender: '',
-    weight: '',
-    height: '',
-    goal: '',
-    activityLevel: '',
-  });
+    const [step, setStep] = useState(1);
+    const [formData, setFormData] = useState<OnboardingFormData>({
+      name: '',
+      age: '',
+      gender: '',
+      weight: '',
+      height: '',
+      goal: '',
+      activityLevel: '',
+    });
 
   const updateForm = (key: keyof typeof formData, value: string) => {
     setFormData(prev => ({ ...prev, [key]: value }));
@@ -55,10 +60,34 @@ export const Onboarding = ({ navigation }: RootStackScreenProps<'Onboarding'>) =
     if (step < 4) {
       setStep(step + 1);
     } else {
-      // Save data and mark onboarding as completed
-      console.log('Onboarding completed:', formData);
-      await AsyncStorage.setItem('onboardingCompleted', 'true');
-      navigation.navigate('MainTabs');
+      try {
+        const profileData: ProfileResponse = {
+          _id: '', // This will be assigned by the backend
+          email: '', // This will be assigned by the backend
+          name: formData.name,
+          profile: {
+            age: parseInt(formData.age),
+            gender: formData.gender,
+            weight: parseFloat(formData.weight),
+            height: parseFloat(formData.height),
+            goal: formData.goal,
+            activityLevel: formData.activityLevel,
+            onboardingCompleted: true
+          }
+        };
+          const response = await ProfileService.saveOnboardingProfile(profileData);
+
+        if (response.success) {
+          await AsyncStorage.setItem('onboardingCompleted', 'true');
+          navigation.navigate('MainTabs');
+        } else {
+          // Add proper error handling
+          Alert.alert('Error', 'Failed to save profile data');
+        }
+      } catch (error) {
+        console.error('Error during onboarding:', error);
+        Alert.alert('Error', 'An unexpected error occurred');
+      }
     }
   };
 

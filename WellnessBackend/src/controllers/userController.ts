@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import User from '../models/User';
+import { AuthRequest } from '../middleware/auth';
 
 // Register User
 export const register = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
@@ -36,23 +37,35 @@ export const login = async (req: Request, res: Response, next: NextFunction): Pr
       return;
     }
     const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET as string, { expiresIn: '1h' });
-    res.json({ token });
+    res.json({ 
+      token,
+      user: {
+        id: user._id,
+        email: user.email,
+        name: user.name
+      }
+    });
   } catch (error) {
     next(error);
   }
 };
 
 // Get Profile
-export const getProfile = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+export const getProfile = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const { userId } = req.query; // Assuming userId is passed as a query parameter
+    const userId = req.user?.id;
+    console.log('Attempting to fetch profile for userId:', userId);
+    
     const user = await User.findById(userId).select('-password');
+    console.log('Found user:', user);
+    
     if (!user) {
       res.status(404).json({ message: 'User not found' });
       return;
     }
     res.json(user);
   } catch (error) {
+    console.error('Profile fetch error:', error);
     next(error);
   }
 };
@@ -86,6 +99,45 @@ export const deleteUser = async (req: Request, res: Response, next: NextFunction
       return;
     }
     res.json({ message: 'User deleted successfully' });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Save the data from to onboarding on the User
+export const saveOnboardingProfile = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) {
+      res.status(401).json({ message: 'User not authenticated' });
+      return;
+    }
+
+    const { name, age, gender, weight, height, goal, activityLevel } = req.body;
+
+    const user = await User.findByIdAndUpdate(
+      userId,
+      {
+        name,
+        profile: {
+          age: Number(age),
+          gender,
+          weight: Number(weight),
+          height: Number(height),
+          goal,
+          activityLevel,
+          onboardingCompleted: true
+        }
+      },
+      { new: true, runValidators: true }
+    ).select('-password');
+
+    if (!user) {
+      res.status(404).json({ message: 'User not found' });
+      return;
+    }
+
+    res.json(user);
   } catch (error) {
     next(error);
   }

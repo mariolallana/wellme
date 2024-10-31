@@ -16,14 +16,18 @@ export const api = axios.create({
 
 // Add a request interceptor to include the auth token
 api.interceptors.request.use(
-  async (config) => {
-    const token = await AsyncStorage.getItem('token');
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
+    async (config) => {
+      const token = await AsyncStorage.getItem('token');
+      console.log('Sending request with token:', token);
+      if (token) {
+        // Make sure we're using the correct format
+        config.headers.Authorization = `Bearer ${token}`;
+        console.log('Authorization header:', config.headers.Authorization);
+      }
+      return config;
+    },
+    (error) => {
+      console.error('Interceptor error:', error);
+      return Promise.reject(error);
     }
-    return config;
-  },
-  (error) => {
-    return Promise.reject(error);
-  }
-);
+  );

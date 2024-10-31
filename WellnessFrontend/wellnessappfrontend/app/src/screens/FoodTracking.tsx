@@ -18,29 +18,21 @@ import { SmoothContainer } from '../components/SmoothContainer';
 import { Animated, Easing } from 'react-native';
 import { FoodTrackingService } from '../services/api/foodTracking.service';
 import { useEffect } from 'react';
+import { FoodEntry, DailyNutrients } from '../services/api/types';
 
-type FoodItem = {
-  id: string;
-  name: string;
-  calories: number;
-  carbohydrates: number;
-  proteins: number;
-  fats: number;
-  time: string;
-};
 
 export const FoodTracking = ({ navigation }: MainTabScreenProps<'FoodTracking'>) => {
-  const [meals, setMeals] = useState<FoodItem[]>([]);
-  const [foodInput, setFoodInput] = useState('');
-  const [isAddFoodVisible, setIsAddFoodVisible] = useState(false);
-  const animatedHeight = useState(new Animated.Value(0))[0];
-  const [nutrients, setNutrients] = useState({
+  const [meals, setMeals] = useState<FoodEntry[]>([]);
+  const [nutrients, setNutrients] = useState<DailyNutrients>({
     calories: 0,
     carbohydrates: 0,
     proteins: 0,
     fats: 0,
   });
   const [isLoading, setIsLoading] = useState(true);
+  const [foodInput, setFoodInput] = useState('');
+  const [isAddFoodVisible, setIsAddFoodVisible] = useState(false);
+  const [animatedHeight] = useState(new Animated.Value(0));
 
   const handleAddFood = async () => {
     try {
@@ -96,11 +88,11 @@ export const FoodTracking = ({ navigation }: MainTabScreenProps<'FoodTracking'>)
     }).start();
   };
 
-  const renderMeal = ({ item }: { item: FoodItem }) => (
+  const renderMeal = ({ item }: { item: FoodEntry }) => (
     <View style={styles.mealCard}>
       <View style={styles.mealInfo}>
         <Text style={styles.mealName}>{item.name}</Text>
-        <Text style={styles.mealTime}>{item.time}</Text>
+        <Text style={styles.mealTime}>{item.time.toLocaleString()}</Text>
       </View>
       <Text style={styles.calories}>{item.calories} cal</Text>
       <View style={{ backgroundColor: '#4CAF50', width: `${(item.calories / 2000) * 100}%`, height: 5 }} />

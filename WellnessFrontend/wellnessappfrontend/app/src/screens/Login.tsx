@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { AuthStackScreenProps } from '../navigation/types';
 import { AuthService } from '../services/api/auth.service';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export const Login = ({ navigation }: AuthStackScreenProps<'Login'>) => {
     const [email, setEmail] = useState('');
@@ -20,15 +21,20 @@ export const Login = ({ navigation }: AuthStackScreenProps<'Login'>) => {
   
     const handleLogin = async () => {
         try {
-          const success = await AuthService.login(email, password);
-          if (!success) {
-            setError('Invalid credentials');
+          const response = await AuthService.login(email, password);
+          if (response.success) {
+            // Force a re-check of authentication state
+            const event = new Event('storage');
+            window.dispatchEvent(event);
+          } else {
+            setError(response.error || 'Invalid credentials');
           }
         } catch (error) {
           console.error('Login error:', error);
           setError('An error occurred during login');
         }
       };
+
 
   return (
     <SafeAreaView style={styles.container}>

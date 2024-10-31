@@ -1,16 +1,17 @@
+import { Text, View } from 'react-native';
+import React, { useEffect } from 'react';
+import { RootNavigator } from './src/navigation/RootNavigator';
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { useFonts } from 'expo-font';
 import * as SplashScreen from 'expo-splash-screen';
-import { useEffect } from 'react';
 import { useColorScheme } from '@/app/src/hooks/useColorScheme';
-import { RootNavigator } from './src/navigation/RootNavigator';
 
 SplashScreen.preventAutoHideAsync();
 
-export default function RootLayout() {
+export default function App() {
   const colorScheme = useColorScheme();
   const [loaded] = useFonts({
-    SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
+    SpaceMono: require('./src/assets/fonts/SpaceMono-Regular.ttf'),
   });
 
   useEffect(() => {
