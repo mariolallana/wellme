@@ -5,6 +5,7 @@ import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native
 import { useFonts } from 'expo-font';
 import * as SplashScreen from 'expo-splash-screen';
 import { useColorScheme } from '@/app/src/hooks/useColorScheme';
+import { AuthProvider } from './src/context/AuthContext';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -25,8 +26,10 @@ export default function App() {
   }
 
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <RootNavigator />
-    </ThemeProvider>
+    <AuthProvider>
+      <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+        <RootNavigator />
+      </ThemeProvider>
+    </AuthProvider>
   );
 }

@@ -38,22 +38,27 @@ export const FoodTracking = ({ navigation }: MainTabScreenProps<'FoodTracking'>)
     try {
       if (!foodInput.trim()) return;
       
-      const newFood = await FoodTrackingService.addFoodEntry({
+      const response = await FoodTrackingService.addFoodEntry({
         name: foodInput,
         calories: 0,
         carbohydrates: 0,
         proteins: 0,
         fats: 0,
-        time: new Date(),
+        consumedAt: new Date(),
       });
   
-      setMeals(prevMeals => [...prevMeals, newFood]);
+      // Check if response has data property
+      if (response.data) {
+        setMeals(prevMeals => [...prevMeals, response.data as FoodEntry]);
+      }
       setFoodInput('');
       toggleAddFood();
   
       // Refresh nutrients
-      const dailyNutrients = await FoodTrackingService.getDailyNutrients(new Date());
-      setNutrients(dailyNutrients);
+      const nutrientsResponse = await FoodTrackingService.getDailyNutrients(new Date());
+      if (nutrientsResponse.data) {
+        setNutrients(nutrientsResponse.data);
+      }
     } catch (error) {
       console.error('Error adding food:', error);
     }
@@ -63,11 +68,15 @@ export const FoodTracking = ({ navigation }: MainTabScreenProps<'FoodTracking'>)
     const loadData = async () => {
       try {
         setIsLoading(true);
-        const entries = await FoodTrackingService.getDailyEntries(new Date());
-        setMeals(entries);
+        const entriesResponse = await FoodTrackingService.getDailyEntries(new Date());
+        if (entriesResponse.data) {
+          setMeals(entriesResponse.data);
+        }
         
-        const dailyNutrients = await FoodTrackingService.getDailyNutrients(new Date());
-        setNutrients(dailyNutrients);
+        const nutrientsResponse = await FoodTrackingService.getDailyNutrients(new Date());
+        if (nutrientsResponse.data) {
+          setNutrients(nutrientsResponse.data);
+        }
       } catch (error) {
         console.error('Error loading food data:', error);
       } finally {
@@ -92,7 +101,9 @@ export const FoodTracking = ({ navigation }: MainTabScreenProps<'FoodTracking'>)
     <View style={styles.mealCard}>
       <View style={styles.mealInfo}>
         <Text style={styles.mealName}>{item.name}</Text>
-        <Text style={styles.mealTime}>{item.time.toLocaleString()}</Text>
+        <Text style={styles.mealTime}>
+        {new Date(item.consumedAt).toLocaleString()}
+      </Text>
       </View>
       <Text style={styles.calories}>{item.calories} cal</Text>
       <View style={{ backgroundColor: '#4CAF50', width: `${(item.calories / 2000) * 100}%`, height: 5 }} />
@@ -179,7 +190,7 @@ export const FoodTracking = ({ navigation }: MainTabScreenProps<'FoodTracking'>)
           <FlatList
             data={meals}
             renderItem={renderMeal}
-            keyExtractor={item => item.id}
+            keyExtractor={item => item._id}
             contentContainerStyle={styles.mealsList}
             scrollEnabled={false}
           />

@@ -45,10 +45,11 @@ export type UserProfile = {
 };
 
 export type FoodEntry = {
+  _id: string;  // Changed from id to _id to match MongoDB
   name: string;
   calories: number;
-  proteins: number;      // Make sure these match
-  carbohydrates: number; // your backend schema
+  proteins: number;
+  carbohydrates: number;
   fats: number;
   servingSize: number;
   servingUnit: string;
@@ -70,3 +71,11 @@ export type LoginResponse = {
     name: string;
   };
 };
+
+export interface NutrientInferenceResponse {
+  calories: number;
+  carbohydrates: number;
+  proteins: number;
+  fats: number;
+  confidence: number;
+}

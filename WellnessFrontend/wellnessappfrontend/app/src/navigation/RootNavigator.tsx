@@ -1,38 +1,32 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect } from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AuthNavigator } from './AuthNavigator';
 import { MainTabNavigator } from './MainTabNavigator';
 import { Onboarding } from '../screens/Onboarding';
 import { RootStackParamList } from './types';
 import { StatusBar } from 'react-native';
+import { useAuth } from '../context/AuthContext';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 export const RootNavigator = () => {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [hasCompletedOnboarding, setHasCompletedOnboarding] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
+  const { isAuthenticated } = useAuth();
+  const [hasCompletedOnboarding, setHasCompletedOnboarding] = React.useState(false);
+  const [isLoading, setIsLoading] = React.useState(true);
 
   useEffect(() => {
-    const checkAuth = async () => {
+    const checkOnboarding = async () => {
       try {
-        // First check authentication
-        const token = await AsyncStorage.getItem('token');
-        setIsAuthenticated(!!token);
-
-        // Only check onboarding if authenticated
-        if (token) {
-          const onboardingCompleted = await AsyncStorage.getItem('onboardingCompleted');
-          setHasCompletedOnboarding(onboardingCompleted === 'true');
-        }
+        const onboardingCompleted = await AsyncStorage.getItem('onboardingCompleted');
+        setHasCompletedOnboarding(onboardingCompleted === 'true');
       } catch (error) {
-        console.error('Error checking auth state:', error);
+        console.error('Error checking onboarding state:', error);
       } finally {
         setIsLoading(false);
       }
     };
-    checkAuth();
+    checkOnboarding();
   }, []);
 
   if (isLoading) {

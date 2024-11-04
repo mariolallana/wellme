@@ -9,31 +9,34 @@ import {
   SafeAreaView,
   KeyboardAvoidingView,
   Platform,
+  Alert,
 } from 'react-native';
 import { AuthStackScreenProps } from '../navigation/types';
 import { AuthService } from '../services/api/auth.service';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useAuth } from '../context/AuthContext';
 
 export const Login = ({ navigation }: AuthStackScreenProps<'Login'>) => {
-    const [email, setEmail] = useState('');
-    const [password, setPassword] = useState('');
-    const [error, setError] = useState('');
-  
-    const handleLogin = async () => {
-        try {
-          const response = await AuthService.login(email, password);
-          if (response.success) {
-            // Force a re-check of authentication state
-            const event = new Event('storage');
-            window.dispatchEvent(event);
-          } else {
-            setError(response.error || 'Invalid credentials');
-          }
-        } catch (error) {
-          console.error('Login error:', error);
-          setError('An error occurred during login');
-        }
-      };
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const { login } = useAuth();
+
+  const handleLogin = async () => {
+    try {
+      const response = await AuthService.login(email, password);
+      if (response.success && response.data) {
+        await login(response.data.token);
+        // Navigation will be handled by RootNavigator based on auth state
+      } else {
+        setError(response.error || 'Invalid credentials');
+        Alert.alert('Login Failed', response.error || 'Invalid credentials');
+      }
+    } catch (error) {
+      console.error('Login error:', error);
+      setError('An error occurred during login');
+      Alert.alert('Error', 'An error occurred during login');
+    }
+  };
 
 
   return (
