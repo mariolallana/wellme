@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -7,8 +7,9 @@ import {
   FlatList,
   SafeAreaView,
   TextInput,
-  Button,
   ScrollView,
+  Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { MainTabScreenProps } from '../navigation/types';
@@ -17,8 +18,8 @@ import { ProgressBar } from '../components/ProgressBar';
 import { SmoothContainer } from '../components/SmoothContainer';
 import { Animated, Easing } from 'react-native';
 import { FoodTrackingService } from '../services/api/foodTracking.service';
-import { useEffect } from 'react';
 import { FoodEntry, DailyNutrients } from '../services/api/types';
+import { NutrientInferenceService } from '../services/api/nutrientInference.service';
 
 
 export const FoodTracking = ({ navigation }: MainTabScreenProps<'FoodTracking'>) => {
@@ -38,29 +39,47 @@ export const FoodTracking = ({ navigation }: MainTabScreenProps<'FoodTracking'>)
     try {
       if (!foodInput.trim()) return;
       
+      setIsLoading(true); // Add loading state while processing
+      
+      // First, infer nutrients from the food description
+      const inferenceResponse = await NutrientInferenceService.inferNutrients(foodInput);
+      
+      if (!inferenceResponse.success) {
+        Alert.alert('Error', 'Failed to analyze food nutrients');
+        return;
+      }
+  
+      const { calories, carbohydrates, proteins, fats } = inferenceResponse.data;
+      
+      // Then add the food entry with the inferred nutrients
       const response = await FoodTrackingService.addFoodEntry({
         name: foodInput,
-        calories: 0,
-        carbohydrates: 0,
-        proteins: 0,
-        fats: 0,
+        calories,
+        carbohydrates,
+        proteins,
+        fats,
         consumedAt: new Date(),
       });
   
-      // Check if response has data property
       if (response.data) {
         setMeals(prevMeals => [...prevMeals, response.data as FoodEntry]);
-      }
-      setFoodInput('');
-      toggleAddFood();
+        setFoodInput('');
+        toggleAddFood();
   
-      // Refresh nutrients
-      const nutrientsResponse = await FoodTrackingService.getDailyNutrients(new Date());
-      if (nutrientsResponse.data) {
-        setNutrients(nutrientsResponse.data);
+        // Refresh nutrients
+        const nutrientsResponse = await FoodTrackingService.getDailyNutrients(new Date());
+        if (nutrientsResponse.data) {
+          setNutrients(nutrientsResponse.data);
+        }
+        
+        // Show success message
+        Alert.alert('Success', 'Food added successfully!');
       }
     } catch (error) {
       console.error('Error adding food:', error);
+      Alert.alert('Error', 'Failed to add food entry');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -128,7 +147,7 @@ export const FoodTracking = ({ navigation }: MainTabScreenProps<'FoodTracking'>)
           {
             maxHeight: animatedHeight.interpolate({
               inputRange: [0, 1],
-              outputRange: [0, 500]  // Increased from 300 to 500
+              outputRange: [0, 500]
             }),
             opacity: animatedHeight,
             transform: [{
@@ -140,20 +159,42 @@ export const FoodTracking = ({ navigation }: MainTabScreenProps<'FoodTracking'>)
             overflow: 'hidden',
           }
         ]}>
-          <SmoothContainer>
-            <Text style={styles.sectionTitle}>Add Food</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Enter food item"
-              value={foodInput}
-              onChangeText={setFoodInput}
-            />
-            <View style={styles.inputButtons}>
-              <CustomButton title="Add" onPress={handleAddFood} />
-              <CustomButton title="Camera" onPress={() => console.log('Camera access')} color="#2196F3" />
-              <CustomButton title="Gallery" onPress={() => console.log('Gallery access')} color="#FF9800" />
+      <SmoothContainer>
+        <Text style={styles.sectionTitle}>Add Food</Text>
+        <TextInput
+          style={[styles.input, isLoading && styles.inputDisabled]}
+          placeholder="Enter food item (e.g., '2 scrambled eggs with toast')"
+          value={foodInput}
+          onChangeText={setFoodInput}
+          editable={!isLoading}
+        />
+        <View style={styles.inputButtons}>
+          {isLoading ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="small" color="#4CAF50" />
+              <Text style={styles.loadingText}>Analyzing food...</Text>
             </View>
-          </SmoothContainer>
+          ) : (
+            <>
+              <CustomButton 
+                title="Add" 
+                onPress={handleAddFood} 
+                disabled={!foodInput.trim()}
+              />
+              <CustomButton 
+                title="Camera" 
+                onPress={() => console.log('Camera access')} 
+                color="#2196F3" 
+              />
+              <CustomButton 
+                title="Gallery" 
+                onPress={() => console.log('Gallery access')} 
+                color="#FF9800" 
+              />
+            </>
+          )}
+        </View>
+      </SmoothContainer>
         </Animated.View>
 
   
@@ -210,6 +251,21 @@ const styles = StyleSheet.create({
   },
   addFoodContainer: {
     marginHorizontal: 20,
+  },
+  inputDisabled: {
+    backgroundColor: '#f5f5f5',
+    opacity: 0.7,
+  },
+  loadingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 15,
+    gap: 10,
+  },
+  loadingText: {
+    color: '#666',
+    fontSize: 16,
   },
   header: {
     flexDirection: 'row',

@@ -1,37 +1,72 @@
 import React from 'react';
-import { TouchableOpacity, Text, StyleSheet, View } from 'react-native';
+import { 
+  TouchableOpacity, 
+  Text, 
+  StyleSheet, 
+  StyleProp, 
+  ViewStyle 
+} from 'react-native';
 
-type CustomButtonProps = {
+interface CustomButtonProps {
   title: string;
   onPress: () => void;
   color?: string;
-};
+  disabled?: boolean;
+  style?: StyleProp<ViewStyle>;
+}
 
-export const CustomButton: React.FC<CustomButtonProps> = ({ title, onPress, color = '#4CAF50' }) => (
-  <View style={styles.buttonContainer}>
-    <TouchableOpacity style={[styles.button, { backgroundColor: color }]} onPress={onPress}>
-      <Text style={styles.buttonText}>{title}</Text>
-    </TouchableOpacity>
-  </View>
+export const CustomButton: React.FC<CustomButtonProps> = ({ 
+  title, 
+  onPress, 
+  color = '#4CAF50',
+  disabled = false,
+  style 
+}) => (
+  <TouchableOpacity 
+    style={[
+      styles.button, 
+      { backgroundColor: color },
+      disabled && styles.buttonDisabled,
+      style
+    ]} 
+    onPress={onPress}
+    disabled={disabled}
+  >
+    <Text style={[
+      styles.buttonText,
+      disabled && styles.buttonTextDisabled
+    ]}>
+      {title}
+    </Text>
+  </TouchableOpacity>
 );
 
 const styles = StyleSheet.create({
-  buttonContainer: {
-    alignItems: 'center',
-    marginVertical: 10,
-  },
   button: {
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    borderRadius: 25,
+    padding: 15,
+    borderRadius: 5,
     alignItems: 'center',
     justifyContent: 'center',
-    maxWidth: '80%',
-    minWidth: 120,
+    elevation: 2, // for Android shadow
+    shadowColor: '#000', // for iOS shadow
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+  },
+  buttonDisabled: {
+    opacity: 0.6,
+    elevation: 0,
+    shadowOpacity: 0,
   },
   buttonText: {
     color: '#fff',
     fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: '500',
+  },
+  buttonTextDisabled: {
+    color: 'rgba(255, 255, 255, 0.8)',
   },
 });

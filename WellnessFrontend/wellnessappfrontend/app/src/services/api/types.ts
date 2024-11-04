@@ -72,10 +72,15 @@ export type LoginResponse = {
   };
 };
 
-export interface NutrientInferenceResponse {
+export interface NutrientInferenceResult {
   calories: number;
   carbohydrates: number;
   proteins: number;
   fats: number;
   confidence: number;
+}
+
+export interface NutrientInferenceResponse {
+  success: boolean;
+  data: NutrientInferenceResult;
 }
