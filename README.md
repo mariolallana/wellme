@@ -18,7 +18,9 @@ docker-compose up
 # Run frontend: React-native expo app
 Open a powershell or cmd and navigate to the folder: 
 
+```bash
 cd WellnessFrontend\wellnessappfrontend
+```
 
 Now start the app:
 
