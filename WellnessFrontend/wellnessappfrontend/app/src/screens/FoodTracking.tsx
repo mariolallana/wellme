@@ -20,6 +20,7 @@ import { Animated, Easing } from 'react-native';
 import { FoodTrackingService } from '../services/api/foodTracking.service';
 import { FoodEntry, DailyNutrients } from '../services/api/types';
 import { NutrientInferenceService } from '../services/api/nutrientInference.service';
+import MacroNutrientDisplay from '../components/macroNutrientDisplay';
 
 
 export const FoodTracking = ({ navigation }: MainTabScreenProps<'FoodTracking'>) => {
@@ -83,13 +84,46 @@ export const FoodTracking = ({ navigation }: MainTabScreenProps<'FoodTracking'>)
     }
   };
 
+  const isSameDay = (date1: string | Date, date2: Date) => {
+    // Ensure we have a valid Date object for date1
+    const d1 = typeof date1 === 'string' ? new Date(date1) : date1;
+    
+    // Add validation to ensure we have valid dates
+    if (isNaN(d1.getTime())) {
+      console.error('Invalid date1:', date1);
+      return false;
+    }
+  
+    console.log('Comparing dates:', {
+      date1: d1.toISOString(),
+      date2: date2.toISOString()
+    });
+    
+    return (
+      d1.getFullYear() === date2.getFullYear() &&
+      d1.getMonth() === date2.getMonth() &&
+      d1.getDate() === date2.getDate()
+    );
+  };
+  
+
   useEffect(() => {
     const loadData = async () => {
       try {
         setIsLoading(true);
         const entriesResponse = await FoodTrackingService.getDailyEntries(new Date());
-        if (entriesResponse.data) {
-          setMeals(entriesResponse.data);
+        
+        const mealsData = entriesResponse.data || [];
+  
+        if (Array.isArray(mealsData)) {
+          const today = new Date();
+          
+          const todayMeals = mealsData.filter((meal: FoodEntry) => {
+            return isSameDay(meal.consumedAt, today);
+          });
+  
+          console.log('Filtered Meals:', todayMeals);
+          setMeals(todayMeals);
         }
         
         const nutrientsResponse = await FoodTrackingService.getDailyNutrients(new Date());
@@ -117,19 +151,38 @@ export const FoodTracking = ({ navigation }: MainTabScreenProps<'FoodTracking'>)
   };
 
   const renderMeal = ({ item }: { item: FoodEntry }) => (
-    <View style={styles.mealCard}>
-      <View style={styles.mealInfo}>
+    <SmoothContainer style={styles.mealCard}>
+      <View style={styles.mealHeader}>
         <Text style={styles.mealName}>{item.name}</Text>
-        <Text style={styles.mealTime}>
-        {new Date(item.consumedAt).toLocaleString()}
-      </Text>
+        <Text style={styles.calories}>{item.calories} cal</Text>
       </View>
-      <Text style={styles.calories}>{item.calories} cal</Text>
-      <View style={{ backgroundColor: '#4CAF50', width: `${(item.calories / 2000) * 100}%`, height: 5 }} />
-      <View style={{ backgroundColor: '#FF9800', width: `${(item.carbohydrates / 300) * 100}%`, height: 5 }} />
-      <View style={{ backgroundColor: '#2196F3', width: `${(item.proteins / 150) * 100}%`, height: 5 }} />
-      <View style={{ backgroundColor: '#FFC107', width: `${(item.fats / 70) * 100}%`, height: 5 }} />
-    </View>
+      <Text style={styles.mealTime}>
+        {new Date(item.consumedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+      </Text>
+      <View style={styles.macronutrientContainer}>
+        <MacroNutrientDisplay
+          label="Carbs"
+          value={item.carbohydrates}
+          unit="g"
+          color="#2196F3"
+          small
+        />
+        <MacroNutrientDisplay
+          label="Proteins"
+          value={item.proteins}
+          unit="g"
+          color="#9C27B0"
+          small
+        />
+        <MacroNutrientDisplay
+          label="Fats"
+          value={item.fats}
+          unit="g"
+          color="#FFC107"
+          small
+        />
+      </View>
+    </SmoothContainer>
   );
 
   return (
@@ -141,7 +194,7 @@ export const FoodTracking = ({ navigation }: MainTabScreenProps<'FoodTracking'>)
             <Ionicons name={isAddFoodVisible ? "close" : "add"} size={24} color="#fff" />
           </TouchableOpacity>
         </View>
-  
+
         <Animated.View style={[
           styles.addFoodContainer,
           {
@@ -159,45 +212,44 @@ export const FoodTracking = ({ navigation }: MainTabScreenProps<'FoodTracking'>)
             overflow: 'hidden',
           }
         ]}>
-      <SmoothContainer>
-        <Text style={styles.sectionTitle}>Add Food</Text>
-        <TextInput
-          style={[styles.input, isLoading && styles.inputDisabled]}
-          placeholder="Enter food item (e.g., '2 scrambled eggs with toast')"
-          value={foodInput}
-          onChangeText={setFoodInput}
-          editable={!isLoading}
-        />
-        <View style={styles.inputButtons}>
-          {isLoading ? (
-            <View style={styles.loadingContainer}>
-              <ActivityIndicator size="small" color="#4CAF50" />
-              <Text style={styles.loadingText}>Analyzing food...</Text>
+          <SmoothContainer>
+            <Text style={styles.sectionTitle}>Add Food</Text>
+            <TextInput
+              style={[styles.input, isLoading && styles.inputDisabled]}
+              placeholder="Enter food item (e.g., '2 scrambled eggs with toast')"
+              value={foodInput}
+              onChangeText={setFoodInput}
+              editable={!isLoading}
+            />
+            <View style={styles.inputButtons}>
+              {isLoading ? (
+                <View style={styles.loadingContainer}>
+                  <ActivityIndicator size="small" color="#4CAF50" />
+                  <Text style={styles.loadingText}>Analyzing food...</Text>
+                </View>
+              ) : (
+                <>
+                  <CustomButton 
+                    title="Add" 
+                    onPress={handleAddFood} 
+                    disabled={!foodInput.trim()}
+                  />
+                  <CustomButton 
+                    title="Camera" 
+                    onPress={() => console.log('Camera access')} 
+                    color="#2196F3" 
+                  />
+                  <CustomButton 
+                    title="Gallery" 
+                    onPress={() => console.log('Gallery access')} 
+                    color="#FF9800" 
+                  />
+                </>
+              )}
             </View>
-          ) : (
-            <>
-              <CustomButton 
-                title="Add" 
-                onPress={handleAddFood} 
-                disabled={!foodInput.trim()}
-              />
-              <CustomButton 
-                title="Camera" 
-                onPress={() => console.log('Camera access')} 
-                color="#2196F3" 
-              />
-              <CustomButton 
-                title="Gallery" 
-                onPress={() => console.log('Gallery access')} 
-                color="#FF9800" 
-              />
-            </>
-          )}
-        </View>
-      </SmoothContainer>
+          </SmoothContainer>
         </Animated.View>
 
-  
         <SmoothContainer>
           <Text style={styles.sectionTitle}>Macronutrients</Text>
           <ProgressBar 
@@ -215,8 +267,34 @@ export const FoodTracking = ({ navigation }: MainTabScreenProps<'FoodTracking'>)
             color="#ffeb3b" 
             label="Fats" 
           />
+          <View style={styles.macronutrientContainer}>
+            <MacroNutrientDisplay
+              label="Calories"
+              value={nutrients.calories}
+              unit="cal"
+              color="#4CAF50"
+            />
+            <MacroNutrientDisplay
+              label="Carbs"
+              value={nutrients.carbohydrates}
+              unit="g"
+              color="#2196F3"
+            />
+            <MacroNutrientDisplay
+              label="Proteins"
+              value={nutrients.proteins}
+              unit="g"
+              color="#9C27B0"
+            />
+            <MacroNutrientDisplay
+              label="Fats"
+              value={nutrients.fats}
+              unit="g"
+              color="#FFC107"
+            />
+          </View>
         </SmoothContainer>
-  
+
         <SmoothContainer style={styles.summary}>
           <View style={styles.calorieInfo}>
             <Text style={styles.calorieTitle}>Calories Today</Text>
@@ -225,15 +303,18 @@ export const FoodTracking = ({ navigation }: MainTabScreenProps<'FoodTracking'>)
             </Text>
           </View>
         </SmoothContainer>
-  
+
         <View style={styles.content}>
-          <Text style={styles.sectionTitle}>Today's Meals</Text>
-          <FlatList
-            data={meals}
-            renderItem={renderMeal}
-            keyExtractor={item => item._id}
+        <Text style={styles.sectionTitle}>Today's Meals</Text>
+        <FlatList
+          data={meals}
+          renderItem={renderMeal}
+          keyExtractor={item => item._id}
             contentContainerStyle={styles.mealsList}
             scrollEnabled={false}
+            ListEmptyComponent={() => (
+              <Text style={styles.emptyText}>No meals added today</Text>
+      )}
           />
         </View>
       </ScrollView>
@@ -357,29 +438,56 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   mealCard: {
+    marginVertical: 5,
+    padding: 12,
+    backgroundColor: '#fff',
+    borderRadius: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  mealHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: '#f5f5f5',
-    padding: 15,
-    borderRadius: 10,
-  },
-  mealInfo: {
-    flex: 1,
+    marginBottom: 4,
   },
   mealName: {
     fontSize: 16,
-    fontWeight: '500',
+    fontWeight: '600',
+    color: '#333',
+    flex: 1,
   },
   mealTime: {
-    fontSize: 14,
+    fontSize: 12,
     color: '#666',
-    marginTop: 2,
+    marginBottom: 8,
   },
   calories: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: 'bold',
     color: '#4CAF50',
+    marginLeft: 8,
+  },
+  macronutrientContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    marginTop: 8,
+  },
+  mealsList: {
+    paddingHorizontal: 16,
+    paddingBottom: 16,
+  },
+  emptyText: {
+    textAlign: 'center',
+    color: '#666',
+    fontSize: 14,
+    marginTop: 20,
+  },
+  mealInfo: {
+    flex: 1,
   },
   addButton: {
     backgroundColor: '#4CAF50',
@@ -388,5 +496,5 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     justifyContent: 'center',
     alignItems: 'center',
-  },
+  }
 });

@@ -8,9 +8,9 @@ import { AuthRequest } from '../middleware/auth';
 export const register = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const { username, email, password } = req.body;
-    const existingUser = await User.findOne({ $or: [{ username }, { email }] });
+    const existingUser = await User.findOne({ $or: [{ email }, { username }] });
     if (existingUser) {
-      res.status(400).json({ message: 'Username or email already exists' });
+      res.status(400).json({ message: 'Email or username already exists' });
       return;
     }
     const hashedPassword = await bcrypt.hash(password, 10);
@@ -22,7 +22,7 @@ export const register = async (req: Request, res: Response, next: NextFunction):
   }
 };
 
-// Login User
+// Login User response should also return username instead of name
 export const login = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const { email, password } = req.body;
@@ -42,7 +42,7 @@ export const login = async (req: Request, res: Response, next: NextFunction): Pr
       user: {
         id: user._id,
         email: user.email,
-        name: user.name
+        username: user.username
       }
     });
   } catch (error) {
@@ -71,14 +71,21 @@ export const getProfile = async (req: AuthRequest, res: Response, next: NextFunc
 };
 
 // Update Profile
-export const updateProfile = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+export const updateProfile = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const { userId, username, email } = req.body; // Assuming userId is passed in the body
+    const userId = req.user?.id;
+    if (!userId) {
+      res.status(401).json({ message: 'User not authenticated' });
+      return;
+    }
+
+    const { username, email, profile } = req.body;
     const user = await User.findByIdAndUpdate(
       userId,
-      { username, email },
+      { username, email, profile },
       { new: true, runValidators: true }
     ).select('-password');
+
     if (!user) {
       res.status(404).json({ message: 'User not found' });
       return;
@@ -104,7 +111,6 @@ export const deleteUser = async (req: Request, res: Response, next: NextFunction
   }
 };
 
-// Save the data from to onboarding on the User
 export const saveOnboardingProfile = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
     const userId = req.user?.id;
@@ -113,12 +119,12 @@ export const saveOnboardingProfile = async (req: AuthRequest, res: Response, nex
       return;
     }
 
-    const { name, age, gender, weight, height, goal, activityLevel } = req.body;
+    const { username, age, gender, weight, height, goal, activityLevel } = req.body;
 
     const user = await User.findByIdAndUpdate(
       userId,
       {
-        name,
+        username,
         profile: {
           age: Number(age),
           gender,

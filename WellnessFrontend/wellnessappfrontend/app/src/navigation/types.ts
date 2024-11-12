@@ -2,10 +2,12 @@
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 
+
 export type RootStackParamList = {
-  Auth: undefined;
-  Onboarding: undefined;
-  MainTabs: undefined;
+  Auth: undefined; // Add other screens as needed
+  Onboarding: undefined; // Add other screens as needed
+  MainTabs: undefined; // Add other screens as needed
+  AsyncStorageTest: undefined; // Add this line
 };
 
 export type AuthStackParamList = {

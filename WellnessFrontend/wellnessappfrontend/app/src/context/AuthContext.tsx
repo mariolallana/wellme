@@ -1,98 +1,109 @@
-import React, { createContext, useState, useContext, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { AppState, AppStateStatus } from 'react-native';
+import { UserProfile } from '../services/api/types';
 
-interface AuthContextType {
+type AuthContextType = {
   isAuthenticated: boolean;
-  login: (token: string) => Promise<void>;
-  logout: () => Promise<void>;
+  user: UserProfile | null;
   token: string | null;
-}
+  login: (token: string, userData: UserProfile) => Promise<void>;
+  logout: () => Promise<void>;
+  updateUserProfile: (profile: UserProfile) => void;
+  completeOnboarding: () => Promise<void>;
+};
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const SESSION_TIMEOUT = 5 * 60 * 1000; // 5 minutes in milliseconds
-
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [user, setUser] = useState<UserProfile | null>(null);
   const [token, setToken] = useState<string | null>(null);
-  const [lastActivity, setLastActivity] = useState<number>(Date.now());
 
-  // Check authentication status on mount
   useEffect(() => {
-    checkAuthStatus();
+    initializeAuth();
   }, []);
 
-  // Monitor app state changes
-  useEffect(() => {
-    const subscription = AppState.addEventListener('change', handleAppStateChange);
-    return () => {
-      subscription.remove();
-    };
-  }, []);
-
-  // Session timeout checker
-  useEffect(() => {
-    const intervalId = setInterval(async () => {
-      if (isAuthenticated) {
-        const lastActivityTime = await AsyncStorage.getItem('lastActivity');
-        if (lastActivityTime && Date.now() - parseInt(lastActivityTime) > SESSION_TIMEOUT) {
-          logout();
-        }
-      }
-    }, 1000);
-
-    return () => clearInterval(intervalId);
-  }, [isAuthenticated]);
-
-  const handleAppStateChange = async (nextAppState: AppStateStatus) => {
-    if (nextAppState === 'active') {
-      await AsyncStorage.setItem('lastActivity', Date.now().toString());
-    }
-  };
-
-  const checkAuthStatus = async () => {
+  const initializeAuth = async () => {
     try {
-      const storedToken = await AsyncStorage.getItem('token');
-      const lastActivityTime = await AsyncStorage.getItem('lastActivity');
-      
-      if (storedToken && lastActivityTime) {
-        if (Date.now() - parseInt(lastActivityTime) > SESSION_TIMEOUT) {
-          await logout();
-        } else {
-          setToken(storedToken);
-          setIsAuthenticated(true);
-        }
+      const [storedToken, userDataString] = await Promise.all([
+        AsyncStorage.getItem('token'),
+        AsyncStorage.getItem('userData'),
+      ]);
+
+      if (storedToken && userDataString) {
+        const userData = JSON.parse(userDataString);
+        setToken(storedToken);
+        setUser(userData);
+        // Only set authenticated if user exists and has completed onboarding
+        setIsAuthenticated(userData.hasCompletedOnboarding === true);
       }
     } catch (error) {
-      console.error('Error checking auth status:', error);
+      console.error('Auth initialization error:', error);
     }
   };
 
-  const login = async (newToken: string) => {
+  const login = async (newToken: string, userData: UserProfile) => {
     try {
-      await AsyncStorage.setItem('token', newToken);
-      await AsyncStorage.setItem('lastActivity', Date.now().toString());
+      console.log('Login function called with userData:', userData); // Debug log
+      await Promise.all([
+        AsyncStorage.setItem('token', newToken),
+        AsyncStorage.setItem('userData', JSON.stringify(userData))
+      ]);
       setToken(newToken);
-      setIsAuthenticated(true);
+      setUser(userData);
+      console.log('User data after setting:', userData); // Debug log
+      console.log('Has completed onboarding:', userData.profile.onboardingCompleted); // Debug log
+      setIsAuthenticated(true); // Set this based on successful login, not onboarding status
+      console.log('Authentication state:', true); // Debug log
     } catch (error) {
-      console.error('Error during login:', error);
+      console.error('Login error:', error);
+      throw error;
     }
   };
 
   const logout = async () => {
     try {
-      await AsyncStorage.removeItem('token');
-      await AsyncStorage.removeItem('lastActivity');
+      await Promise.all([
+        AsyncStorage.removeItem('token'),
+        AsyncStorage.removeItem('userData')
+      ]);
       setToken(null);
+      setUser(null);
       setIsAuthenticated(false);
     } catch (error) {
-      console.error('Error during logout:', error);
+      console.error('Logout error:', error);
+      throw error;
+    }
+  };
+
+  const updateUserProfile = (profile: UserProfile) => {
+    setUser(profile);
+    AsyncStorage.setItem('userData', JSON.stringify(profile));
+  };
+
+  const completeOnboarding = async () => {
+    try {
+      await AsyncStorage.setItem('onboardingCompleted', 'true');
+      if (user) {
+        const updatedUser = { ...user, hasCompletedOnboarding: true };
+        await updateUserProfile(updatedUser);
+      }
+    } catch (error) {
+      console.error('Onboarding completion error:', error);
+      throw error;
     }
   };
 
   return (
-    <AuthContext.Provider value={{ isAuthenticated, login, logout, token }}>
+    <AuthContext.Provider value={{
+      isAuthenticated,
+      user,
+      token,
+      login,
+      logout,
+      updateUserProfile,
+      completeOnboarding
+    }}>
       {children}
     </AuthContext.Provider>
   );

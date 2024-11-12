@@ -8,7 +8,7 @@ import { Ionicons } from '@expo/vector-icons';
 
 const Tab = createBottomTabNavigator<MainTabParamList>();
 
-export const MainTabNavigator = () => {
+const MainTabNavigator = () => {
   return (
     <Tab.Navigator
       screenOptions={{
@@ -44,3 +44,6 @@ export const MainTabNavigator = () => {
     </Tab.Navigator>
   );
 };
+
+// Change the export to default
+export default MainTabNavigator;

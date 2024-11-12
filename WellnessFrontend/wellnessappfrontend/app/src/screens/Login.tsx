@@ -14,6 +14,7 @@ import {
 import { AuthStackScreenProps } from '../navigation/types';
 import { AuthService } from '../services/api/auth.service';
 import { useAuth } from '../context/AuthContext';
+import { mapLoginResponseToUserProfile } from '../utils/mappers';
 
 export const Login = ({ navigation }: AuthStackScreenProps<'Login'>) => {
   const [email, setEmail] = useState('');
@@ -22,10 +23,19 @@ export const Login = ({ navigation }: AuthStackScreenProps<'Login'>) => {
   const { login } = useAuth();
 
   const handleLogin = async () => {
+    if (!email || !password) {
+      setError('Please enter both email and password');
+      Alert.alert('Login Failed', 'Please enter both email and password');
+      return;
+    }
+
     try {
       const response = await AuthService.login(email, password);
+      
       if (response.success && response.data) {
-        await login(response.data.token);
+        const { token, user } = response.data;
+        const userProfile = mapLoginResponseToUserProfile(user);
+        await login(token, userProfile);
         // Navigation will be handled by RootNavigator based on auth state
       } else {
         setError(response.error || 'Invalid credentials');

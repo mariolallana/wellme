@@ -6,11 +6,11 @@ import { userRouter } from './routes/userRoutes';
 import { foodTrackingRouter } from './routes/foodTracking.routes';
 import { nutrientInferenceRouter } from './routes/nutrientInference.routes';
 
-
 dotenv.config();
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = Number(process.env.PORT) || 3000;
+const HOST = process.env.HOST || '0.0.0.0';
 const MONGODB_URI = process.env.MONGODB_URI;
 
 if (!MONGODB_URI) {
@@ -20,6 +20,11 @@ if (!MONGODB_URI) {
 
 app.use(cors());
 app.use(express.json());
+
+// Health check endpoint
+app.get('/api/health', (req, res) => {
+  res.status(200).json({ status: 'ok' });
+});
 
 // Connect to MongoDB
 mongoose.connect(MONGODB_URI)
@@ -35,8 +40,8 @@ mongoose.connect(MONGODB_URI)
     app.use('/api/food-tracking', foodTrackingRouter);
     app.use('/api/nutrient-inference', nutrientInferenceRouter);
     // Start the server
-    app.listen(PORT, () => {
-      console.log(`Server is running on port ${PORT}`);
+    app.listen(PORT, HOST, () => {
+      console.log(`Server is running on http://${HOST}:${PORT}`);
     });
   })
   .catch((error) => {

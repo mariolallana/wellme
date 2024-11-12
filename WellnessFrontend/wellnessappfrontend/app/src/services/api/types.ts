@@ -5,7 +5,7 @@ export type ApiResponse<T> = {
   error?: string;
 };
 
-export type ProfileResponse = {
+export type UserProfile = {
   _id: string;
   email: string;
   name: string;
@@ -30,22 +30,9 @@ export type OnboardingFormData = {
   activityLevel: string;
 };
 
-export type UserProfile = {
-  name: string;
-  email: string;
-  profile: {
-    age: number;
-    gender: string;
-    weight: number;
-    height: number;
-    goal: string;
-    activityLevel: string;
-    onboardingCompleted: boolean;
-  };
-};
-
+// Rest of the types remain unchanged
 export type FoodEntry = {
-  _id: string;  // Changed from id to _id to match MongoDB
+  _id: string;
   name: string;
   calories: number;
   proteins: number;

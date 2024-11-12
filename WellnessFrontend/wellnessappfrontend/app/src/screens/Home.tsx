@@ -39,9 +39,11 @@ export const Home = ({ navigation }: MainTabScreenProps<'Home'>) => {
   useEffect(() => {
     const checkAuthAndProfile = async () => {
       const token = await AsyncStorage.getItem('token');
+      console.log('[Home] Token:', token);
       if (token) {
         try {
           const response = await ProfileService.getUserProfile();
+          console.log('[Home] Profile fetch response:', response);
           if (response.success && response.data) {
             setProfile(response.data);
           }

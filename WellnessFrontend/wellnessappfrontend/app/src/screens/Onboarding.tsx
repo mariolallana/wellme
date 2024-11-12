@@ -15,9 +15,10 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { RootStackScreenProps } from '../navigation/types';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ProfileService } from '../services/api/profile.service';
-import { ProfileResponse, OnboardingFormData } from '../services/api/types';
+import { OnboardingFormData } from '../services/api/types';
+import { useAuth } from '../context/AuthContext';
+
 
 
 
@@ -42,6 +43,7 @@ const ACTIVITY_LEVELS = [
 
 export const Onboarding = ({ navigation }: RootStackScreenProps<'Onboarding'>) => {
     const [step, setStep] = useState(1);
+    const { completeOnboarding } = useAuth();
     const [formData, setFormData] = useState<OnboardingFormData>({
       name: '',
       age: '',
@@ -61,28 +63,25 @@ export const Onboarding = ({ navigation }: RootStackScreenProps<'Onboarding'>) =
       setStep(step + 1);
     } else {
       try {
-        const profileData: ProfileResponse = {
-          _id: '', // This will be assigned by the backend
-          email: '', // This will be assigned by the backend
+        // Updated to match the expected OnboardingFormData structure
+        const profileData = {
           name: formData.name,
-          profile: {
-            age: parseInt(formData.age),
-            gender: formData.gender,
-            weight: parseFloat(formData.weight),
-            height: parseFloat(formData.height),
-            goal: formData.goal,
-            activityLevel: formData.activityLevel,
-            onboardingCompleted: true
-          }
+          age: formData.age,
+          gender: formData.gender,
+          weight: formData.weight,
+          height: formData.height,
+          goal: formData.goal,
+          activityLevel: formData.activityLevel,
         };
-          const response = await ProfileService.saveOnboardingProfile(profileData);
-
+  
+        const response = await ProfileService.saveOnboardingProfile(profileData);
+  
         if (response.success) {
-          await AsyncStorage.setItem('onboardingCompleted', 'true');
+          await completeOnboarding();
+          console.log('[Onboarding] Onboarding completed flag set to true');
           navigation.navigate('MainTabs');
         } else {
-          // Add proper error handling
-          Alert.alert('Error', 'Failed to save profile data');
+          Alert.alert('Error', response.error || 'Failed to save profile data');
         }
       } catch (error) {
         console.error('Error during onboarding:', error);
@@ -90,6 +89,7 @@ export const Onboarding = ({ navigation }: RootStackScreenProps<'Onboarding'>) =
       }
     }
   };
+
 
   const handleBack = () => {
     if (step > 1) {

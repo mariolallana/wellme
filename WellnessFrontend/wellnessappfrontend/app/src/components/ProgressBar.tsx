@@ -7,15 +7,22 @@ type ProgressBarProps = {
   label: string;
 };
 
-export const ProgressBar: React.FC<ProgressBarProps> = ({ progress, color, label }) => (
-  <View style={styles.container}>
-    <View style={styles.progressBarContainer}>
-      <View style={[styles.progressBar, { width: `${progress}%`, backgroundColor: color }]} />
+export const ProgressBar: React.FC<ProgressBarProps> = ({ progress, color, label }) => {
+  // Ensure progress is between 0 and 100
+  const clampedProgress = Math.min(Math.max(progress, 0), 100);
+  // Format to one decimal place
+  const formattedProgress = clampedProgress.toFixed(1);
+
+  return (
+    <View style={styles.container}>
+      <View style={styles.progressBarContainer}>
+        <View style={[styles.progressBar, { width: `${clampedProgress}%`, backgroundColor: color }]} />
+      </View>
+      <Text style={styles.progressText}>{`${formattedProgress}%`}</Text>
+      <Text style={styles.label}>{label}</Text>
     </View>
-    <Text style={styles.progressText}>{`${progress}%`}</Text>
-    <Text style={styles.label}>{label}</Text>
-  </View>
-);
+  );
+};
 
 const styles = StyleSheet.create({
   container: {

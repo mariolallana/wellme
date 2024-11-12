@@ -1,4 +1,3 @@
-import { Text, View } from 'react-native';
 import React, { useEffect } from 'react';
 import { RootNavigator } from './src/navigation/RootNavigator';
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
@@ -6,6 +5,7 @@ import { useFonts } from 'expo-font';
 import * as SplashScreen from 'expo-splash-screen';
 import { useColorScheme } from '@/app/src/hooks/useColorScheme';
 import { AuthProvider } from './src/context/AuthContext';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -26,10 +26,12 @@ export default function App() {
   }
 
   return (
-    <AuthProvider>
-      <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-        <RootNavigator />
-      </ThemeProvider>
-    </AuthProvider>
+    <SafeAreaProvider>
+      <AuthProvider>
+        <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+          <RootNavigator />
+        </ThemeProvider>
+      </AuthProvider>
+    </SafeAreaProvider>
   );
 }

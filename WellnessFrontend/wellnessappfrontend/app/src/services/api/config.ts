@@ -1,18 +1,14 @@
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-
-// For web development
-const API_URL = process.env.NODE_ENV === 'development' 
-  ? 'http://localhost:3000/api'
-  : 'http://192.168.1.100:3000/api'; // Replace with your production URL
-
+import { API_CONFIG } from './api.config';
 
 export const api = axios.create({
-  baseURL: API_URL,
+  baseURL: API_CONFIG.BASE_URL,
   headers: {
-    'Content-Type': 'application/json',
+      'Content-Type': 'application/json',
   },
 });
+
 
 // Add a request interceptor to include the auth token
 api.interceptors.request.use(
@@ -31,3 +27,12 @@ api.interceptors.request.use(
       return Promise.reject(error);
     }
   );
+
+// Add response interceptor
+api.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+      console.error('API Error:', error.response?.data || error.message);
+      return Promise.reject(error);
+  }
+);
