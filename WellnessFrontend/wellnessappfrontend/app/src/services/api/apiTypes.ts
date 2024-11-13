@@ -8,7 +8,7 @@ export type ApiResponse<T> = {
 export type UserProfile = {
   _id: string;
   email: string;
-  name: string;
+  username: string;
   profile: {
     age: number;
     gender: string;
@@ -40,7 +40,7 @@ export type FoodEntry = {
   fats: number;
   servingSize: number;
   servingUnit: string;
-  consumedAt: Date;
+  time: Date;
 };
 
 export type DailyNutrients = {
@@ -52,12 +52,9 @@ export type DailyNutrients = {
 
 export type LoginResponse = {
   token: string;
-  user: {
-    id: string;
-    email: string;
-    name: string;
-  };
+  user: UserProfile;
 };
+
 
 export interface NutrientInferenceResult {
   calories: number;

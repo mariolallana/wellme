@@ -23,6 +23,7 @@ export const register = async (req: Request, res: Response, next: NextFunction):
 };
 
 // Login User response should also return username instead of name
+// Login User
 export const login = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const { email, password } = req.body;
@@ -36,14 +37,31 @@ export const login = async (req: Request, res: Response, next: NextFunction): Pr
       res.status(401).json({ message: 'Invalid credentials' });
       return;
     }
+    
+    // Generate token
     const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET as string, { expiresIn: '1h' });
+    
+    // Ensure we send the complete user data with correct profile structure
+    const userData = {
+      _id: user._id,
+      email: user.email,
+      username: user.username,
+      profile: {
+        age: user.profile?.age || 0,
+        gender: user.profile?.gender || '',
+        weight: user.profile?.weight || 0,
+        height: user.profile?.height || 0,
+        goal: user.profile?.goal || '',
+        activityLevel: user.profile?.activityLevel || '',
+        onboardingCompleted: user.profile?.onboardingCompleted || false
+      }
+    };
+
+    console.log('Sending user data:', userData); // Debug log
+    
     res.json({ 
       token,
-      user: {
-        id: user._id,
-        email: user.email,
-        username: user.username
-      }
+      user: userData
     });
   } catch (error) {
     next(error);

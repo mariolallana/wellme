@@ -1,6 +1,6 @@
 import { api } from './config';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { LoginResponse, ApiResponse } from './types';
+import { LoginResponse, ApiResponse, UserProfile } from './apiTypes';
 
 export class AuthService {
   static async login(email: string, password: string): Promise<ApiResponse<LoginResponse>> {
@@ -10,8 +10,13 @@ export class AuthService {
         password 
       });
       
-      const { token } = response.data;
-      await AsyncStorage.setItem('token', token);
+      const { token, user } = response.data;
+      console.log('Received user data:', user); // Debug log
+
+      await Promise.all([
+        AsyncStorage.setItem('token', token),
+        AsyncStorage.setItem('userData', JSON.stringify(user))
+      ]);
       
       return {
         success: true,

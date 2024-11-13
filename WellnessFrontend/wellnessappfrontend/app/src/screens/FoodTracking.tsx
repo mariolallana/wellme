@@ -18,10 +18,10 @@ import { ProgressBar } from '../components/ProgressBar';
 import { SmoothContainer } from '../components/SmoothContainer';
 import { Animated, Easing } from 'react-native';
 import { FoodTrackingService } from '../services/api/foodTracking.service';
-import { FoodEntry, DailyNutrients } from '../services/api/types';
+import { FoodEntry, DailyNutrients } from '../services/api/apiTypes';
 import { NutrientInferenceService } from '../services/api/nutrientInference.service';
 import MacroNutrientDisplay from '../components/macroNutrientDisplay';
-
+import { useAuth } from '../context/AuthContext';
 
 export const FoodTracking = ({ navigation }: MainTabScreenProps<'FoodTracking'>) => {
   const [meals, setMeals] = useState<FoodEntry[]>([]);
@@ -35,50 +35,91 @@ export const FoodTracking = ({ navigation }: MainTabScreenProps<'FoodTracking'>)
   const [foodInput, setFoodInput] = useState('');
   const [isAddFoodVisible, setIsAddFoodVisible] = useState(false);
   const [animatedHeight] = useState(new Animated.Value(0));
+  const { getToken } = useAuth();
 
   const handleAddFood = async () => {
     try {
       if (!foodInput.trim()) return;
-      
-      setIsLoading(true); // Add loading state while processing
-      
-      // First, infer nutrients from the food description
+
+      setIsLoading(true);
+
+      const token = await getToken();
+      if (!token) {
+        Alert.alert('Error', 'No authentication token found');
+        return;
+      }
+
       const inferenceResponse = await NutrientInferenceService.inferNutrients(foodInput);
-      
+
       if (!inferenceResponse.success) {
         Alert.alert('Error', 'Failed to analyze food nutrients');
         return;
       }
-  
+
       const { calories, carbohydrates, proteins, fats } = inferenceResponse.data;
-      
-      // Then add the food entry with the inferred nutrients
+
       const response = await FoodTrackingService.addFoodEntry({
         name: foodInput,
         calories,
         carbohydrates,
         proteins,
         fats,
-        consumedAt: new Date(),
-      });
-  
+        time: new Date(),
+      }, token);
+
       if (response.data) {
         setMeals(prevMeals => [...prevMeals, response.data as FoodEntry]);
         setFoodInput('');
         toggleAddFood();
-  
-        // Refresh nutrients
-        const nutrientsResponse = await FoodTrackingService.getDailyNutrients(new Date());
+
+        const nutrientsResponse = await FoodTrackingService.getDailyNutrients(new Date(), token);
         if (nutrientsResponse.data) {
           setNutrients(nutrientsResponse.data);
         }
-        
-        // Show success message
+
         Alert.alert('Success', 'Food added successfully!');
       }
     } catch (error) {
       console.error('Error adding food:', error);
       Alert.alert('Error', 'Failed to add food entry');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const loadData = async () => {
+    try {
+      setIsLoading(true);
+      const token = await getToken();
+      if (!token) {
+        Alert.alert('Error', 'No authentication token found');
+        return;
+      }
+
+      const entriesResponse = await FoodTrackingService.getDailyEntries(new Date(), token);
+      const mealsData = entriesResponse.data || [];
+
+      if (Array.isArray(mealsData)) {
+        const today = new Date();
+        const todayMeals = mealsData.filter((meal: FoodEntry) => {
+          const consumedAtDate = new Date(meal.time);
+          if (isNaN(consumedAtDate.getTime())) {
+            console.error('Invalid time:', meal.time);
+            return false;
+          }
+          return isSameDay(consumedAtDate, today);
+        });
+
+        console.log('Filtered Meals:', todayMeals);
+        setMeals(todayMeals);
+      }
+
+      const nutrientsResponse = await FoodTrackingService.getDailyNutrients(new Date(), token);
+      if (nutrientsResponse.data) {
+        setNutrients(nutrientsResponse.data);
+      }
+    } catch (error) {
+      console.error('Error loading food data:', error);
     } finally {
       setIsLoading(false);
     }
@@ -105,38 +146,8 @@ export const FoodTracking = ({ navigation }: MainTabScreenProps<'FoodTracking'>)
       d1.getDate() === date2.getDate()
     );
   };
-  
 
   useEffect(() => {
-    const loadData = async () => {
-      try {
-        setIsLoading(true);
-        const entriesResponse = await FoodTrackingService.getDailyEntries(new Date());
-        
-        const mealsData = entriesResponse.data || [];
-  
-        if (Array.isArray(mealsData)) {
-          const today = new Date();
-          
-          const todayMeals = mealsData.filter((meal: FoodEntry) => {
-            return isSameDay(meal.consumedAt, today);
-          });
-  
-          console.log('Filtered Meals:', todayMeals);
-          setMeals(todayMeals);
-        }
-        
-        const nutrientsResponse = await FoodTrackingService.getDailyNutrients(new Date());
-        if (nutrientsResponse.data) {
-          setNutrients(nutrientsResponse.data);
-        }
-      } catch (error) {
-        console.error('Error loading food data:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-  
     loadData();
   }, []);
 
@@ -157,7 +168,7 @@ export const FoodTracking = ({ navigation }: MainTabScreenProps<'FoodTracking'>)
         <Text style={styles.calories}>{item.calories} cal</Text>
       </View>
       <Text style={styles.mealTime}>
-        {new Date(item.consumedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+        {new Date(item.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
       </Text>
       <View style={styles.macronutrientContainer}>
         <MacroNutrientDisplay
@@ -310,12 +321,12 @@ export const FoodTracking = ({ navigation }: MainTabScreenProps<'FoodTracking'>)
           data={meals}
           renderItem={renderMeal}
           keyExtractor={item => item._id}
-            contentContainerStyle={styles.mealsList}
-            scrollEnabled={false}
-            ListEmptyComponent={() => (
-              <Text style={styles.emptyText}>No meals added today</Text>
-      )}
-          />
+          contentContainerStyle={styles.mealsList}
+          scrollEnabled={false}
+          ListEmptyComponent={() => (
+            <Text style={styles.emptyText}>No meals added today</Text>
+          )}
+        />
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -434,9 +445,6 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 20,
   },
-  mealsList: {
-    gap: 10,
-  },
   mealCard: {
     marginVertical: 5,
     padding: 12,
@@ -479,6 +487,7 @@ const styles = StyleSheet.create({
   mealsList: {
     paddingHorizontal: 16,
     paddingBottom: 16,
+    gap: 10,
   },
   emptyText: {
     textAlign: 'center',

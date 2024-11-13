@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { UserProfile } from '../services/api/types';
+import { UserProfile } from '../services/api/apiTypes';
 
 // Navigation and services
 import { MainTabScreenProps } from '../navigation/types';

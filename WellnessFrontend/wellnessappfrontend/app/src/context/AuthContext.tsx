@@ -1,15 +1,18 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { UserProfile } from '../services/api/types';
+import { UserProfile } from '../services/api/apiTypes';
+import { API_CONFIG } from '../services/api/api.config';
 
 type AuthContextType = {
   isAuthenticated: boolean;
   user: UserProfile | null;
   token: string | null;
+  hasCompletedOnboarding: boolean;
   login: (token: string, userData: UserProfile) => Promise<void>;
   logout: () => Promise<void>;
   updateUserProfile: (profile: UserProfile) => void;
   completeOnboarding: () => Promise<void>;
+  getToken: () => Promise<string | null>;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -18,10 +21,61 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [user, setUser] = useState<UserProfile | null>(null);
   const [token, setToken] = useState<string | null>(null);
+  const [hasCompletedOnboarding, setHasCompletedOnboarding] = useState(false);
 
   useEffect(() => {
     initializeAuth();
   }, []);
+
+  const login = async (newToken: string, userData: UserProfile) => {
+    try {
+      console.log('Raw login data received:', userData);
+  
+      // Fetch user data from the API using the new token
+      const fetchedUserData = await fetchUserData(newToken);
+  
+      await Promise.all([
+        AsyncStorage.setItem('token', newToken),
+        AsyncStorage.setItem('userData', JSON.stringify(fetchedUserData))
+      ]);
+  
+      setToken(newToken);
+      setUser(fetchedUserData);
+      setIsAuthenticated(true);
+      setHasCompletedOnboarding(fetchedUserData.profile.onboardingCompleted);
+  
+      console.log('Final auth state:', {
+        isAuthenticated: true,
+        hasCompletedOnboarding: fetchedUserData.profile.onboardingCompleted,
+        user: fetchedUserData
+      });
+    } catch (error) {
+      console.error('Login error:', error);
+      throw error;
+    }
+  };
+
+// Example function to fetch user data from the API
+const fetchUserData = async (token: string): Promise<UserProfile> => {
+  try {
+    const response = await fetch(`${API_CONFIG.BASE_URL}/users/profile`, {
+      method: 'GET',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch user data');
+    }
+
+    return await response.json();
+  } catch (error) {
+      console.error('Error fetching user data:', error);
+      throw error;
+    }
+  };
 
   const initializeAuth = async () => {
     try {
@@ -29,37 +83,44 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         AsyncStorage.getItem('token'),
         AsyncStorage.getItem('userData'),
       ]);
-
+  
       if (storedToken && userDataString) {
         const userData = JSON.parse(userDataString);
-        setToken(storedToken);
-        setUser(userData);
-        // Only set authenticated if user exists and has completed onboarding
-        setIsAuthenticated(userData.hasCompletedOnboarding === true);
+        console.log('Loaded user data:', userData);
+        
+        // Check if the token is valid (you might want to add a function to validate the token)
+        if (isTokenValid(storedToken)) { // {{ edit_1 }}
+          const onboardingStatus = userData.profile?.onboardingCompleted || false;
+          console.log('Loaded onboarding status:', onboardingStatus);
+          
+          setToken(storedToken);
+          setUser(userData);
+          setIsAuthenticated(true);
+          setHasCompletedOnboarding(onboardingStatus);
+        } else {
+          // If the token is invalid, clear the stored data
+          await logout(); // {{ edit_2 }}
+        }
       }
     } catch (error) {
       console.error('Auth initialization error:', error);
     }
   };
 
-  const login = async (newToken: string, userData: UserProfile) => {
-    try {
-      console.log('Login function called with userData:', userData); // Debug log
-      await Promise.all([
-        AsyncStorage.setItem('token', newToken),
-        AsyncStorage.setItem('userData', JSON.stringify(userData))
-      ]);
-      setToken(newToken);
-      setUser(userData);
-      console.log('User data after setting:', userData); // Debug log
-      console.log('Has completed onboarding:', userData.profile.onboardingCompleted); // Debug log
-      setIsAuthenticated(true); // Set this based on successful login, not onboarding status
-      console.log('Authentication state:', true); // Debug log
-    } catch (error) {
-      console.error('Login error:', error);
-      throw error;
-    }
+  const getToken = async (): Promise<string | null> => {
+    return await AsyncStorage.getItem('token');
   };
+  
+  const isTokenValid = (token: string): boolean => {
+    try {
+      const payload = JSON.parse(atob(token.split('.')[1])); // Decode the JWT payload
+      const currentTime = Math.floor(Date.now() / 1000); // Current time in seconds
+      return payload.exp > currentTime; // Check if the token is still valid
+    } catch (error) {
+      console.error('Token validation error:', error);
+      return false; // If there's an error, consider the token invalid
+    }
+  }; // {{ edit_1 }}
 
   const logout = async () => {
     try {
@@ -85,8 +146,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       await AsyncStorage.setItem('onboardingCompleted', 'true');
       if (user) {
-        const updatedUser = { ...user, hasCompletedOnboarding: true };
+        const updatedUser = {
+          ...user,
+          profile: {
+            ...user.profile,
+            onboardingCompleted: true
+          }
+        };
         await updateUserProfile(updatedUser);
+        setHasCompletedOnboarding(true);
       }
     } catch (error) {
       console.error('Onboarding completion error:', error);
@@ -99,10 +167,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       isAuthenticated,
       user,
       token,
+      hasCompletedOnboarding,
       login,
       logout,
       updateUserProfile,
-      completeOnboarding
+      completeOnboarding,
+      getToken
     }}>
       {children}
     </AuthContext.Provider>

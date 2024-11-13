@@ -16,9 +16,9 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { RootStackScreenProps } from '../navigation/types';
 import { ProfileService } from '../services/api/profile.service';
-import { OnboardingFormData } from '../services/api/types';
+import { OnboardingFormData } from '../services/api/apiTypes';
 import { useAuth } from '../context/AuthContext';
-
+import { LogoutButton } from '../components/LogoutButton';
 
 
 
@@ -273,6 +273,7 @@ export const Onboarding = ({ navigation }: RootStackScreenProps<'Onboarding'>) =
 
   return (
     <SafeAreaView style={styles.container}>
+      <LogoutButton />
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.container}

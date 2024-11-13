@@ -5,14 +5,18 @@ import { Home } from '../screens/Home';
 import { FoodTracking } from '../screens/FoodTracking';
 import { MainTabParamList } from './types';
 import { Ionicons } from '@expo/vector-icons';
+import { LogoutButton } from '../components/LogoutButton';
+import { View } from 'react-native';
 
 const Tab = createBottomTabNavigator<MainTabParamList>();
 
 const MainTabNavigator = () => {
   return (
-    <Tab.Navigator
-      screenOptions={{
-        tabBarStyle: {
+    <View style={{ flex: 1 }}>
+      <LogoutButton />
+      <Tab.Navigator
+        screenOptions={{
+          tabBarStyle: {
           backgroundColor: 'white',
           borderTopWidth: 1,
           borderTopColor: '#E5E5E5',
@@ -41,7 +45,8 @@ const MainTabNavigator = () => {
           tabBarLabel: 'Nutrition'
         }}
       />
-    </Tab.Navigator>
+      </Tab.Navigator>
+      </View>
   );
 };
 

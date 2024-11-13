@@ -1,5 +1,5 @@
 import { api } from './config';
-import { NutrientInferenceResponse } from './types';
+import { NutrientInferenceResponse } from './apiTypes';
 
 export class NutrientInferenceService {
   static async inferNutrients(description: string): Promise<NutrientInferenceResponse> {

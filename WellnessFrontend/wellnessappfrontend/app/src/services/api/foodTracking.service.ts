@@ -1,20 +1,11 @@
 import { api } from './config';
-import { FoodEntry, ApiResponse, DailyNutrients } from './types';
-import { getAuthHeader } from '../../utils/auth.utils';
+import { FoodEntry, ApiResponse, DailyNutrients } from './apiTypes';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export class FoodTrackingService {
-  private static async getAuthHeader() {
-    const token = await AsyncStorage.getItem('userToken');
-    if (!token) {
-      throw new Error('No authentication token found');
-    }
-    return { Authorization: `Bearer ${token}` };
-  }
-
-  static async addFoodEntry(foodData: Partial<FoodEntry>): Promise<ApiResponse<FoodEntry>> {
+  static async addFoodEntry(foodData: Partial<FoodEntry>, token: string): Promise<ApiResponse<FoodEntry>> {
     try {
-      const headers = await this.getAuthHeader();
+      const headers = { Authorization: `Bearer ${token}` };
       const response = await api.post('/food-tracking/entries', foodData, { headers });
       return {
         success: true,
@@ -22,7 +13,6 @@ export class FoodTrackingService {
       };
     } catch (error: any) {
       if (error.response?.status === 401) {
-        // Handle unauthorized error
         console.error('Unauthorized access:', error);
         return {
           success: false,
@@ -36,10 +26,10 @@ export class FoodTrackingService {
       };
     }
   }
-  
-  static async getDailyEntries(date: Date): Promise<ApiResponse<FoodEntry[]>> {
+
+  static async getDailyEntries(date: Date, token: string): Promise<ApiResponse<FoodEntry[]>> {
     try {
-      const headers = await this.getAuthHeader();
+      const headers = { Authorization: `Bearer ${token}` };
       const response = await api.get('/food-tracking/entries/daily', {
         params: { date: date.toISOString() },
         headers
@@ -57,9 +47,9 @@ export class FoodTrackingService {
     }
   }
 
-  static async getDailyNutrients(date: Date): Promise<ApiResponse<DailyNutrients>> {
+  static async getDailyNutrients(date: Date, token: string): Promise<ApiResponse<DailyNutrients>> {
     try {
-      const headers = await this.getAuthHeader();
+      const headers = { Authorization: `Bearer ${token}` };
       const response = await api.get('/food-tracking/nutrients/daily', {
         params: { date: date.toISOString() },
         headers

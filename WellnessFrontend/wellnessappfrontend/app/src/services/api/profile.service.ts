@@ -1,5 +1,5 @@
 import { api } from './config';
-import { UserProfile, ApiResponse, OnboardingFormData } from './types';
+import { UserProfile, ApiResponse, OnboardingFormData } from './apiTypes';
 import { getAuthHeader } from '../../utils/auth.utils';
 
 export class ProfileService {

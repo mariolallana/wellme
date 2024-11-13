@@ -1,4 +1,4 @@
-import { LoginResponse, UserProfile } from '../services/api/types';
+import { LoginResponse, UserProfile } from '../services/api/apiTypes';
 
 export const mapLoginResponseToUserProfile = (user: LoginResponse['user']): UserProfile => ({
   _id: user.id,
