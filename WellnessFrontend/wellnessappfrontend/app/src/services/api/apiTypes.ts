@@ -48,6 +48,12 @@ export type DailyNutrients = {
   carbohydrates: number;
   proteins: number;
   fats: number;
+  goals: {
+    calories: number;
+    carbohydrates: number;
+    proteins: number;
+    fats: number;
+  };
 };
 
 export type LoginResponse = {
@@ -62,9 +68,19 @@ export interface NutrientInferenceResult {
   proteins: number;
   fats: number;
   confidence: number;
+  foodLabel: string;
+  imageUrl: string;
 }
 
 export interface NutrientInferenceResponse {
   success: boolean;
-  data: NutrientInferenceResult;
+  data: {
+    foodLabel: string;
+    calories: number;
+    carbohydrates: number;
+    proteins: number;
+    fats: number;
+    confidence: number;
+  };
+  error?: string;
 }

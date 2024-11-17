@@ -9,6 +9,8 @@ export interface IFoodEntry extends Document {
   fats: number;
   time: Date;
   createdAt: Date;
+  foodLabel?: string;
+  confidence?: number;
 }
 
 const FoodEntrySchema = new Schema({
@@ -20,6 +22,8 @@ const FoodEntrySchema = new Schema({
   fats: { type: Number, required: true },
   time: { type: Date, default: Date.now },
   createdAt: { type: Date, default: Date.now },
+  foodLabel: { type: String },
+  confidence: { type: Number },
 });
 
 export default mongoose.model<IFoodEntry>('FoodEntry', FoodEntrySchema);

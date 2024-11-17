@@ -10,18 +10,22 @@ import {
   ScrollView,
   Alert,
   ActivityIndicator,
+  Easing,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { MainTabScreenProps } from '../navigation/types';
 import { CustomButton } from '../components/CustomButton';
 import { ProgressBar } from '../components/ProgressBar';
 import { SmoothContainer } from '../components/SmoothContainer';
-import { Animated, Easing } from 'react-native';
+import { Animated } from 'react-native';
 import { FoodTrackingService } from '../services/api/foodTracking.service';
 import { FoodEntry, DailyNutrients } from '../services/api/apiTypes';
 import { NutrientInferenceService } from '../services/api/nutrientInference.service';
 import MacroNutrientDisplay from '../components/macroNutrientDisplay';
 import { useAuth } from '../context/AuthContext';
+import { Camera } from 'expo-camera';
+import CameraModal from '../components/CameraModal';
+import NutrientSummary from '../components/NutrientSummary';
 
 export const FoodTracking = ({ navigation }: MainTabScreenProps<'FoodTracking'>) => {
   const [meals, setMeals] = useState<FoodEntry[]>([]);
@@ -30,12 +34,100 @@ export const FoodTracking = ({ navigation }: MainTabScreenProps<'FoodTracking'>)
     carbohydrates: 0,
     proteins: 0,
     fats: 0,
+    goals: {
+      calories: 2000, // Default goals, should be fetched from user settings
+      carbohydrates: 250,
+      proteins: 150,
+      fats: 65
+    }
   });
   const [isLoading, setIsLoading] = useState(true);
   const [foodInput, setFoodInput] = useState('');
   const [isAddFoodVisible, setIsAddFoodVisible] = useState(false);
   const [animatedHeight] = useState(new Animated.Value(0));
   const { getToken } = useAuth();
+
+  // New camera-related states
+  const [isCameraVisible, setIsCameraVisible] = useState(false);
+  const [isCameraOpen, setIsCameraOpen] = useState(false);
+  const [hasPermission, setHasPermission] = useState<boolean | null>(null);
+
+  // Request camera permission on component mount
+  useEffect(() => {
+    (async () => {
+      console.log('Requesting camera permission...');
+      const { status } = await Camera.requestCameraPermissionsAsync();
+      setHasPermission(status === 'granted');
+      console.log('Camera permission status:', status);
+  
+      if (status !== 'granted') {
+        Alert.alert(
+          'Camera Permission Required',
+          'This app requires access to the camera. Please enable it in your device settings.',
+          [{ text: 'OK' }]
+        );
+      }
+    })();
+  }, []);
+
+
+  // New function to handle camera capture
+  const handleCameraCapture = async (base64Image: string) => {
+    console.log('Received captured image in FoodTracking:'); // Log the received image
+    setIsLoading(true);
+    try {
+      const token = await getToken();
+      if (!token) {
+        throw new Error('No authentication token found');
+      }
+  
+      console.log('Sending image to nutrient inference service...');
+      const response = await NutrientInferenceService.inferNutrients(
+        `data:image/jpeg;base64,${base64Image}`,
+        true // indicate this is an image
+      );
+  
+      if (!response.success) {
+        throw new Error('Failed to analyze food nutrients');
+      }
+  
+      const foodData = {
+        name: response.data.foodLabel || 'Unknown Food',
+        calories: response.data.calories,
+        carbohydrates: response.data.carbohydrates,
+        proteins: response.data.proteins,
+        fats: response.data.fats,
+        time: new Date(),
+      };
+  
+      const foodEntry = await FoodTrackingService.addFoodEntry(foodData, token);
+      
+      if (foodEntry.data) {
+        setMeals(prevMeals => [...prevMeals, foodEntry.data as FoodEntry]);
+        await loadData(); // Refresh all data
+        Alert.alert('Success', 'Food added successfully!');
+      }
+    } catch (error) {
+      console.error('Error processing food image:', error);
+      Alert.alert('Error', error instanceof Error ? error.message : 'Failed to process food image');
+    } finally {
+      setIsLoading(false);
+      setIsCameraVisible(false);
+    }
+  };
+
+  // Add this to your existing JSX, where you want the camera button to appear
+  const renderCameraButton = () => (
+    <TouchableOpacity
+      style={styles.cameraButton}
+      onPress={() => {
+        console.log('Opening camera...');
+        setIsCameraVisible(true);
+      }}
+    >
+      <Ionicons name="camera" size={24} color="white" />
+    </TouchableOpacity>
+  );
 
   const handleAddFood = async () => {
     try {
@@ -116,7 +208,18 @@ export const FoodTracking = ({ navigation }: MainTabScreenProps<'FoodTracking'>)
 
       const nutrientsResponse = await FoodTrackingService.getDailyNutrients(new Date(), token);
       if (nutrientsResponse.data) {
-        setNutrients(nutrientsResponse.data);
+        setNutrients({
+          calories: nutrientsResponse.data.calories || 0,
+          carbohydrates: nutrientsResponse.data.carbohydrates || 0,
+          proteins: nutrientsResponse.data.proteins || 0,
+          fats: nutrientsResponse.data.fats || 0,
+          goals: {
+            calories: 2000, // These values should come from user settings
+            carbohydrates: 250,
+            proteins: 150,
+            fats: 65
+          }
+        });
       }
     } catch (error) {
       console.error('Error loading food data:', error);
@@ -170,27 +273,24 @@ export const FoodTracking = ({ navigation }: MainTabScreenProps<'FoodTracking'>)
       <Text style={styles.mealTime}>
         {new Date(item.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
       </Text>
-      <View style={styles.macronutrientContainer}>
+      <View style={styles.macroContainer}>
         <MacroNutrientDisplay
           label="Carbs"
-          value={item.carbohydrates}
+          value={nutrients?.carbohydrates || 0}
+          unit="g"
+          color="#4CAF50"
+        />
+        <MacroNutrientDisplay
+          label="Protein"
+          value={nutrients?.proteins || 0}
           unit="g"
           color="#2196F3"
-          small
         />
         <MacroNutrientDisplay
-          label="Proteins"
-          value={item.proteins}
-          unit="g"
-          color="#9C27B0"
-          small
-        />
-        <MacroNutrientDisplay
-          label="Fats"
-          value={item.fats}
+          label="Fat"
+          value={nutrients?.fats || 0}
           unit="g"
           color="#FFC107"
-          small
         />
       </View>
     </SmoothContainer>
@@ -198,137 +298,121 @@ export const FoodTracking = ({ navigation }: MainTabScreenProps<'FoodTracking'>)
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-        <View style={styles.header}>
-          <Text style={styles.title}>Food Tracking</Text>
-          <TouchableOpacity style={styles.addButton} onPress={toggleAddFood}>
-            <Ionicons name={isAddFoodVisible ? "close" : "add"} size={24} color="#fff" />
-          </TouchableOpacity>
-        </View>
-
-        <Animated.View style={[
-          styles.addFoodContainer,
-          {
-            maxHeight: animatedHeight.interpolate({
-              inputRange: [0, 1],
-              outputRange: [0, 500]
-            }),
-            opacity: animatedHeight,
-            transform: [{
-              translateY: animatedHeight.interpolate({
-                inputRange: [0, 1],
-                outputRange: [-20, 0]
-              })
-            }],
-            overflow: 'hidden',
-          }
-        ]}>
-          <SmoothContainer>
-            <Text style={styles.sectionTitle}>Add Food</Text>
-            <TextInput
-              style={[styles.input, isLoading && styles.inputDisabled]}
-              placeholder="Enter food item (e.g., '2 scrambled eggs with toast')"
-              value={foodInput}
-              onChangeText={setFoodInput}
-              editable={!isLoading}
-            />
-            <View style={styles.inputButtons}>
-              {isLoading ? (
-                <View style={styles.loadingContainer}>
-                  <ActivityIndicator size="small" color="#4CAF50" />
-                  <Text style={styles.loadingText}>Analyzing food...</Text>
-                </View>
-              ) : (
-                <>
-                  <CustomButton 
-                    title="Add" 
-                    onPress={handleAddFood} 
-                    disabled={!foodInput.trim()}
-                  />
-                  <CustomButton 
-                    title="Camera" 
-                    onPress={() => console.log('Camera access')} 
-                    color="#2196F3" 
-                  />
-                  <CustomButton 
-                    title="Gallery" 
-                    onPress={() => console.log('Gallery access')} 
-                    color="#FF9800" 
-                  />
-                </>
-              )}
-            </View>
-          </SmoothContainer>
-        </Animated.View>
-
-        <SmoothContainer>
-          <Text style={styles.sectionTitle}>Macronutrients</Text>
-          <ProgressBar 
-            progress={(nutrients.proteins / 150) * 100} 
-            color="#9c27b0" 
-            label="Proteins" 
-          />
-          <ProgressBar 
-            progress={(nutrients.carbohydrates / 300) * 100} 
-            color="#4caf50" 
-            label="Carbs" 
-          />
-          <ProgressBar 
-            progress={(nutrients.fats / 70) * 100} 
-            color="#ffeb3b" 
-            label="Fats" 
-          />
-          <View style={styles.macronutrientContainer}>
-            <MacroNutrientDisplay
-              label="Calories"
-              value={nutrients.calories}
-              unit="cal"
-              color="#4CAF50"
-            />
-            <MacroNutrientDisplay
-              label="Carbs"
-              value={nutrients.carbohydrates}
-              unit="g"
-              color="#2196F3"
-            />
-            <MacroNutrientDisplay
-              label="Proteins"
-              value={nutrients.proteins}
-              unit="g"
-              color="#9C27B0"
-            />
-            <MacroNutrientDisplay
-              label="Fats"
-              value={nutrients.fats}
-              unit="g"
-              color="#FFC107"
-            />
-          </View>
-        </SmoothContainer>
-
-        <SmoothContainer style={styles.summary}>
-          <View style={styles.calorieInfo}>
-            <Text style={styles.calorieTitle}>Calories Today</Text>
-            <Text style={styles.calorieValue}>
-              {nutrients.calories.toLocaleString()} / 2,000
-            </Text>
-          </View>
-        </SmoothContainer>
-
+      <ScrollView>
         <View style={styles.content}>
-        <Text style={styles.sectionTitle}>Today's Meals</Text>
-        <FlatList
-          data={meals}
-          renderItem={renderMeal}
-          keyExtractor={item => item._id}
-          contentContainerStyle={styles.mealsList}
-          scrollEnabled={false}
-          ListEmptyComponent={() => (
-            <Text style={styles.emptyText}>No meals added today</Text>
+        <NutrientSummary
+          current={{
+              calories: nutrients.calories,
+              carbohydrates: nutrients.carbohydrates,
+              proteins: nutrients.proteins,
+              fats: nutrients.fats,
+            }}
+            goals={nutrients.goals}
+          />
+  
+          {/* Action Buttons Row */}
+          <View style={styles.actionButtons}>
+            {/* Camera Button */}
+            <TouchableOpacity
+              style={styles.cameraButton}
+              onPress={() => {
+                console.log('Opening camera...');
+                setIsCameraVisible(true);
+              }}
+            >
+              <Ionicons name="camera" size={24} color="white" />
+            </TouchableOpacity>
+  
+            {/* Existing Add Food Button */}
+            <TouchableOpacity
+              style={styles.addButton}
+              onPress={() => {
+                console.log('Opening food input...');
+                setIsAddFoodVisible(true);
+              }}
+            >
+              <Ionicons name="add" size={24} color="white" />
+            </TouchableOpacity>
+          </View>
+  
+          {/* Food Input Section */}
+          {isAddFoodVisible && (
+            <View style={styles.input}>
+              <TextInput
+                style={styles.input}
+                value={foodInput}
+                onChangeText={setFoodInput}
+                placeholder="Describe your food..."
+                placeholderTextColor="#999"
+              />
+              <CustomButton
+                title="Add Food"
+                onPress={handleAddFood}
+                isLoading={isLoading}
+              />
+            </View>
           )}
-        />
+  
+          {/* Meals List */}
+          <View style={styles.mealsList}>
+            {meals.length > 0 ? (
+              meals.map((meal, index) => (
+                <View key={meal._id || index} style={styles.mealCard}>
+                  <View style={styles.mealHeader}>
+                    <Text style={styles.mealName}>{meal.name}</Text>
+                    <Text style={styles.calories}>{meal.calories.toFixed(0)} cal</Text>
+                  </View>
+                  <Text style={styles.mealTime}>
+                    {new Date(meal.time).toLocaleTimeString()}
+                  </Text>
+                  <View style={styles.macronutrientContainer}>
+                    <MacroNutrientDisplay
+                      label="Carbs"
+                      value={meal.carbohydrates}
+                      unit="g"
+                      color="#4CAF50"
+                    />
+                    <MacroNutrientDisplay
+                      label="Protein"
+                      value={meal.proteins}
+                      unit="g"
+                      color="#2196F3"
+                    />
+                    <MacroNutrientDisplay
+                      label="Fat"
+                      value={meal.fats}
+                      unit="g"
+                      color="#FFC107"
+                    />
+                  </View>
+                </View>
+              ))
+            ) : (
+              <Text style={styles.emptyText}>No meals added today</Text>
+            )}
+          </View>
         </View>
       </ScrollView>
+  
+      {/* Camera Modal */}
+            
+      {isCameraVisible && (
+        <CameraModal
+          isVisible={isCameraVisible}
+          onClose={() => {
+            console.log('Closing camera...');
+            setIsCameraVisible(false);
+          }}
+          onPhotoTaken={handleCameraCapture}
+        />
+      )}
+  
+      {/* Loading Indicator */}
+      {isLoading && (
+        <View style={styles.loadingOverlay}>
+          <ActivityIndicator size="large" color="#4CAF50" />
+        </View>
+      )}
     </SafeAreaView>
   );
 };
@@ -395,22 +479,27 @@ const styles = StyleSheet.create({
     justifyContent: 'space-around',
     marginVertical: 10,
   },
-  progressBarContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginVertical: 10,
+  progressBarsContainer: {
+    marginTop: 15,
+    paddingHorizontal: 10,
+  },
+  progressBarWrapper: {
+    marginVertical: 5,
+  },
+  progressLabel: {
+    fontSize: 16,
+    color: '#666',
+    marginBottom: 2,
   },
   progressBar: {
-    height: 20,
-    borderRadius: 10,
+    height: 12,
     backgroundColor: '#e0e0e0',
-    flex: 1,
-    marginRight: 10,
+    borderRadius: 8,
     overflow: 'hidden',
   },
   filledBar: {
     height: '100%',
-    borderRadius: 10,
+    borderRadius: 8,
   },
   proteinBar: {
     backgroundColor: '#9c27b0',
@@ -481,8 +570,9 @@ const styles = StyleSheet.create({
   },
   macronutrientContainer: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
+    justifyContent: 'space-between',
     marginTop: 8,
+    paddingHorizontal: 5,
   },
   mealsList: {
     paddingHorizontal: 16,
@@ -497,6 +587,36 @@ const styles = StyleSheet.create({
   },
   mealInfo: {
     flex: 1,
+  },
+  macroContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginVertical: 10,
+    paddingHorizontal: 5,
+  },
+  cameraButton: {
+    backgroundColor: '#4CAF50',
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginHorizontal: 10,
+  },
+  actionButtons: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    marginVertical: 10,
+  },
+  loadingOverlay: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: 0,
+    bottom: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.7)',
   },
   addButton: {
     backgroundColor: '#4CAF50',

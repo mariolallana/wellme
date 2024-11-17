@@ -2,6 +2,7 @@ import React from 'react';
 import { 
   TouchableOpacity, 
   Text, 
+  ActivityIndicator,
   StyleSheet, 
   StyleProp, 
   ViewStyle 
@@ -13,6 +14,7 @@ interface CustomButtonProps {
   color?: string;
   disabled?: boolean;
   style?: StyleProp<ViewStyle>;
+  isLoading?: boolean;
 }
 
 export const CustomButton: React.FC<CustomButtonProps> = ({ 
@@ -20,7 +22,8 @@ export const CustomButton: React.FC<CustomButtonProps> = ({
   onPress, 
   color = '#4CAF50',
   disabled = false,
-  style 
+  style,
+  isLoading = false 
 }) => (
   <TouchableOpacity 
     style={[
@@ -30,14 +33,13 @@ export const CustomButton: React.FC<CustomButtonProps> = ({
       style
     ]} 
     onPress={onPress}
-    disabled={disabled}
+    disabled={disabled || isLoading}
   >
-    <Text style={[
-      styles.buttonText,
-      disabled && styles.buttonTextDisabled
-    ]}>
-      {title}
-    </Text>
+      {isLoading ? (
+        <ActivityIndicator color="white" />
+      ) : (
+        <Text style={styles.buttonText}>{title}</Text>
+      )}
   </TouchableOpacity>
 );
 

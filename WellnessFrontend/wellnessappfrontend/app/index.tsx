@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { RootNavigator } from './src/navigation/RootNavigator';
-import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
+import { DarkTheme, DefaultTheme, NavigationContainer, ThemeProvider } from '@react-navigation/native';
 import { useFonts } from 'expo-font';
 import * as SplashScreen from 'expo-splash-screen';
 import { useColorScheme } from '@/app/src/hooks/useColorScheme';
@@ -26,6 +26,7 @@ export default function App() {
   }
 
   return (
+    <NavigationContainer>
     <SafeAreaProvider>
       <AuthProvider>
         <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
@@ -33,5 +34,6 @@ export default function App() {
         </ThemeProvider>
       </AuthProvider>
     </SafeAreaProvider>
+    </NavigationContainer>
   );
 }
