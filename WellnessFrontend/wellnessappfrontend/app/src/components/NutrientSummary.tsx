@@ -1,6 +1,5 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { ProgressBar } from './ProgressBar';
 import { SmoothContainer } from './SmoothContainer';
 
 interface NutrientSummaryProps {
@@ -19,10 +18,32 @@ interface NutrientSummaryProps {
 }
 
 export const NutrientSummary = ({ current, goals }: NutrientSummaryProps) => {
-  const getProgressPercentage = (current: number, goal: number) => {
-    const percentage = (current / goal) * 100;
-    return Math.min(percentage, 100);
-  };
+    console.log('NutrientSummary rendering with props:', { current, goals });
+
+    if (!current || !goals) {
+        console.warn('NutrientSummary: Missing required props', { current, goals });
+        return null;
+    }
+    
+    const progressValues = React.useMemo(() => {
+        if (!current || !goals) {
+          console.warn('Missing current or goals in progressValues calculation');
+          return {
+            carbs: 0,
+            proteins: 0,
+            fats: 0
+          };
+        }
+        
+        const values = {
+          carbs: Math.min((current.carbohydrates / goals.carbohydrates) * 100, 100),
+          proteins: Math.min((current.proteins / goals.proteins) * 100, 100),
+          fats: Math.min((current.fats / goals.fats) * 100, 100)
+        };
+        
+        console.log('Calculated progress values:', values);
+        return values;
+      }, [current, goals]);
 
   return (
     <SmoothContainer>
@@ -46,7 +67,7 @@ export const NutrientSummary = ({ current, goals }: NutrientSummaryProps) => {
               style={[
                 styles.filledBar, 
                 styles.carbBar, 
-                { width: `${getProgressPercentage(current.carbohydrates, goals.carbohydrates)}%` }
+                { width: `${progressValues.carbs}%` }
               ]} 
             />
           </View>
@@ -64,7 +85,7 @@ export const NutrientSummary = ({ current, goals }: NutrientSummaryProps) => {
               style={[
                 styles.filledBar, 
                 styles.proteinBar, 
-                { width: `${getProgressPercentage(current.proteins, goals.proteins)}%` }
+                { width: `${progressValues.proteins}%` }
               ]} 
             />
           </View>
@@ -82,7 +103,7 @@ export const NutrientSummary = ({ current, goals }: NutrientSummaryProps) => {
               style={[
                 styles.filledBar, 
                 styles.fatBar, 
-                { width: `${getProgressPercentage(current.fats, goals.fats)}%` }
+                { width: `${progressValues.fats}%` }
               ]} 
             />
           </View>

@@ -4,6 +4,7 @@ export const uploadFoodImage = async (base64Image: string, token: string) => {
   try {
     const response = await fetch(`${API_CONFIG.BASE_URL}/nutrient-inference`, {
       method: 'POST',
+      credentials: 'include',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${token}`,

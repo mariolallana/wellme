@@ -29,18 +29,39 @@ import NutrientSummary from '../components/NutrientSummary';
 
 export const FoodTracking = ({ navigation }: MainTabScreenProps<'FoodTracking'>) => {
   const [meals, setMeals] = useState<FoodEntry[]>([]);
-  const [nutrients, setNutrients] = useState<DailyNutrients>({
-    calories: 0,
-    carbohydrates: 0,
-    proteins: 0,
-    fats: 0,
-    goals: {
-      calories: 2000, // Default goals, should be fetched from user settings
-      carbohydrates: 250,
-      proteins: 150,
-      fats: 65
-    }
+  const [nutrients, setNutrients] = useState<DailyNutrients>(() => {
+    console.log('Initializing nutrients state');
+    return {
+      calories: 0,
+      carbohydrates: 0,
+      proteins: 0,
+      fats: 0,
+      goals: {
+        calories: 2000,
+        carbohydrates: 250,
+        proteins: 150,
+        fats: 65
+      }
+    };
   });
+  const nutrientSummaryProps = React.useMemo(() => {
+    console.log('Calculating nutrientSummaryProps with nutrients:', nutrients);
+    if (!nutrients || !nutrients.goals) {
+      console.warn('Missing nutrients or goals');
+      return null;
+    }
+    return {
+      current: {
+        calories: nutrients.calories || 0,
+        carbohydrates: nutrients.carbohydrates || 0,
+        proteins: nutrients.proteins || 0,
+        fats: nutrients.fats || 0,
+      },
+      goals: nutrients.goals
+    };
+  }, [nutrients]);
+
+  console.log('Current nutrientSummaryProps:', nutrientSummaryProps);
   const [isLoading, setIsLoading] = useState(true);
   const [foodInput, setFoodInput] = useState('');
   const [isAddFoodVisible, setIsAddFoodVisible] = useState(false);
@@ -165,8 +186,31 @@ export const FoodTracking = ({ navigation }: MainTabScreenProps<'FoodTracking'>)
         toggleAddFood();
 
         const nutrientsResponse = await FoodTrackingService.getDailyNutrients(new Date(), token);
+        console.log('Received nutrients response:', nutrientsResponse.data);
         if (nutrientsResponse.data) {
-          setNutrients(nutrientsResponse.data);
+          setNutrients(prevNutrients => {
+            const defaultGoals = {
+              calories: 2000,
+              carbohydrates: 250,
+              proteins: 150,
+              fats: 65
+            };
+        
+            const newNutrients = {
+              calories: nutrientsResponse.data?.calories || 0,
+              carbohydrates: nutrientsResponse.data?.carbohydrates || 0,
+              proteins: nutrientsResponse.data?.proteins || 0,
+              fats: nutrientsResponse.data?.fats || 0,
+              goals: {
+                ...defaultGoals,
+                ...(prevNutrients?.goals || {}),
+                ...(nutrientsResponse.data?.goals || {})
+              }
+            };
+        
+            console.log('Setting new nutrients:', newNutrients);
+            return newNutrients;
+          });
         }
 
         Alert.alert('Success', 'Food added successfully!');
@@ -208,18 +252,19 @@ export const FoodTracking = ({ navigation }: MainTabScreenProps<'FoodTracking'>)
 
       const nutrientsResponse = await FoodTrackingService.getDailyNutrients(new Date(), token);
       if (nutrientsResponse.data) {
-        setNutrients({
-          calories: nutrientsResponse.data.calories || 0,
-          carbohydrates: nutrientsResponse.data.carbohydrates || 0,
-          proteins: nutrientsResponse.data.proteins || 0,
-          fats: nutrientsResponse.data.fats || 0,
+        setNutrients(prevNutrients => ({
+          calories: nutrientsResponse.data?.calories || 0,
+          carbohydrates: nutrientsResponse.data?.carbohydrates || 0,
+          proteins: nutrientsResponse.data?.proteins || 0,
+          fats: nutrientsResponse.data?.fats || 0,
           goals: {
-            calories: 2000, // These values should come from user settings
-            carbohydrates: 250,
-            proteins: 150,
-            fats: 65
+            ...prevNutrients.goals, // Preserve existing goals
+            calories: nutrientsResponse.data?.goals?.calories || 2000,
+            carbohydrates: nutrientsResponse.data?.goals?.carbohydrates || 250,
+            proteins: nutrientsResponse.data?.goals?.proteins || 150,
+            fats: nutrientsResponse.data?.goals?.fats || 65
           }
-        });
+        }));
       }
     } catch (error) {
       console.error('Error loading food data:', error);
@@ -300,15 +345,13 @@ export const FoodTracking = ({ navigation }: MainTabScreenProps<'FoodTracking'>)
     <SafeAreaView style={styles.container}>
       <ScrollView>
         <View style={styles.content}>
-        <NutrientSummary
-          current={{
-              calories: nutrients.calories,
-              carbohydrates: nutrients.carbohydrates,
-              proteins: nutrients.proteins,
-              fats: nutrients.fats,
-            }}
-            goals={nutrients.goals}
-          />
+        {isLoading ? (
+          <ActivityIndicator size="large" color="#4CAF50" />
+        ) : nutrientSummaryProps ? (
+          <NutrientSummary {...nutrientSummaryProps} />
+        ) : (
+          <ActivityIndicator size="small" color="#4CAF50" />
+        )}
   
           {/* Action Buttons Row */}
           <View style={styles.actionButtons}>
