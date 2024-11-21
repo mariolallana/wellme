@@ -18,16 +18,16 @@ interface NutrientSummaryProps {
 }
 
 export const NutrientSummary = ({ current, goals }: NutrientSummaryProps) => {
-    console.log('NutrientSummary rendering with props:', { current, goals });
+    //console.log('NutrientSummary rendering with props:', { current, goals });
 
     if (!current || !goals) {
-        console.warn('NutrientSummary: Missing required props', { current, goals });
+        // console.warn('NutrientSummary: Missing required props', { current, goals });
         return null;
     }
     
     const progressValues = React.useMemo(() => {
         if (!current || !goals) {
-          console.warn('Missing current or goals in progressValues calculation');
+          //console.warn('Missing current or goals in progressValues calculation');
           return {
             carbs: 0,
             proteins: 0,
@@ -41,7 +41,7 @@ export const NutrientSummary = ({ current, goals }: NutrientSummaryProps) => {
           fats: Math.min((current.fats / goals.fats) * 100, 100)
         };
         
-        console.log('Calculated progress values:', values);
+        // console.log('Calculated progress values:', values);
         return values;
       }, [current, goals]);
 

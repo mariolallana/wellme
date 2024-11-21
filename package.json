@@ -1,0 +1,6 @@
+{
+  "dependencies": {
+    "@huggingface/transformers": "^3.0.2",
+    "canvas": "^2.11.2"
+  }
+}
