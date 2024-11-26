@@ -2,7 +2,7 @@ import React from 'react';
 import { TouchableOpacity, Text, StyleSheet } from 'react-native';
 import { useAuth } from '../context/AuthContext';
 
-export const LogoutButton = () => {
+const LogoutButton = () => {
   const { logout } = useAuth();
 
   const handleLogout = async () => {
@@ -19,6 +19,8 @@ export const LogoutButton = () => {
     </TouchableOpacity>
   );
 };
+
+export default LogoutButton;
 
 const styles = StyleSheet.create({
   button: {

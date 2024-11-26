@@ -1,3 +1,5 @@
+import { NutrientNeeds } from "../../types/nutrient.types";
+
 // API Response Types
 export type ApiResponse<T> = {
   success: boolean;
@@ -5,30 +7,52 @@ export type ApiResponse<T> = {
   error?: string;
 };
 
-export type UserProfile = {
+export interface OnboardingFormData {
+  name: string;
+  age: number;
+  gender: 'male' | 'female';
+  weight: number;
+  height: number;
+  goal: 'lose' | 'maintain' | 'gain';
+  activityLevel: 'sedentary' | 'light' | 'moderate' | 'active';
+  dietaryPreferences: {
+    vegetarian: boolean;
+    vegan: boolean;
+    glutenFree: boolean;
+    lowCholesterol: boolean;
+    diabetesFriendly: boolean;
+  };
+}
+
+export interface UserProfile {
   _id: string;
   email: string;
-  username: string;
   profile: {
+    name: string;
     age: number;
     gender: string;
     weight: number;
     height: number;
     goal: string;
     activityLevel: string;
-    onboardingCompleted: boolean;
   };
-};
+  nutritionalGoals: {
+    dailyCalories: number;
+    macronutrientRatios: {
+      protein: number;
+      carbs: number;
+      fats: number;
+    };
+  };
+  dietaryPreferences: {
+    vegetarian: boolean;
+    vegan: boolean;
+    glutenFree: boolean;
+    lowCholesterol: boolean;
+    diabetesFriendly: boolean;
+  };
+}
 
-export type OnboardingFormData = {
-  name: string;
-  age: string;
-  gender: string;
-  weight: string;
-  height: string;
-  goal: string;
-  activityLevel: string;
-};
 
 // Rest of the types remain unchanged
 export type FoodEntry = {
@@ -83,4 +107,21 @@ export interface NutrientInferenceResponse {
     confidence: number;
   };
   error?: string;
+}
+
+export interface NutritionalGoals {
+  dailyCalories: number;
+  macronutrientRatios: {
+    protein: number;
+    carbs: number;
+    fats: number;
+  };
+}
+
+export interface ProfileResponse {
+  success: boolean;
+  error?: string;
+  data?: {
+    nutrientNeeds: NutrientNeeds;
+  };
 }

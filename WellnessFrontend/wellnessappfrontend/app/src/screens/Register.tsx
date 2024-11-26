@@ -9,17 +9,42 @@ import {
   SafeAreaView,
   KeyboardAvoidingView,
   Platform,
+  Alert,
 } from 'react-native';
 import { AuthStackScreenProps } from '../navigation/types';
+import { AuthService } from '../services/api/auth.service';
 
-export const Register = ({ navigation }: AuthStackScreenProps<'Register'>) => {
+const Register = ({ navigation }: AuthStackScreenProps<'Register'>) => {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleRegister = () => {
-    // Add registration logic here
-    console.log('Register:', { name, email, password });
+  const handleRegister = async () => {
+    if (!name.trim() || !email.trim() || !password.trim()) {
+      Alert.alert('Error', 'Please fill in all fields');
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+      const response = await AuthService.register(name, email, password);
+
+      if (response.success) {
+        Alert.alert(
+          'Success', 
+          'Registration successful! Please login to continue.',
+          [{ text: 'OK', onPress: () => navigation.navigate('Login') }]
+        );
+      } else {
+        Alert.alert('Error', response.error || 'Registration failed');
+      }
+    } catch (error) {
+      console.error('Registration error:', error);
+      Alert.alert('Error', 'An unexpected error occurred');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -56,8 +81,14 @@ export const Register = ({ navigation }: AuthStackScreenProps<'Register'>) => {
             secureTextEntry
           />
           
-          <TouchableOpacity style={styles.button} onPress={handleRegister}>
-            <Text style={styles.buttonText}>Sign Up</Text>
+          <TouchableOpacity 
+            style={[styles.button, isLoading && styles.buttonDisabled]}
+            onPress={handleRegister}
+            disabled={isLoading}
+          >
+            <Text style={styles.buttonText}>
+              {isLoading ? 'Creating Account...' : 'Sign Up'}
+            </Text>
           </TouchableOpacity>
 
           <TouchableOpacity 
@@ -73,6 +104,8 @@ export const Register = ({ navigation }: AuthStackScreenProps<'Register'>) => {
     </SafeAreaView>
   );
 };
+
+export default Register;
 
 const styles = StyleSheet.create({
   container: {
@@ -125,5 +158,8 @@ const styles = StyleSheet.create({
   linkText: {
     color: '#4CAF50',
     fontSize: 16,
+  },
+  buttonDisabled: {
+    backgroundColor: '#a5d5a7',
   },
 });

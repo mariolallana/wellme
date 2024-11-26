@@ -1,13 +1,13 @@
 // src/navigation/AuthNavigator.tsx
 import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { Login } from '../screens/Login';
-import { Register } from '../screens/Register';
+import Login from '../screens/Login';
+import Register from '../screens/Register';
 import { AuthStackParamList } from './types';
 
 const Stack = createNativeStackNavigator<AuthStackParamList>();
 
-export const AuthNavigator = () => {
+const AuthNavigator = () => {
   return (
     <Stack.Navigator 
       screenOptions={{
@@ -20,3 +20,5 @@ export const AuthNavigator = () => {
     </Stack.Navigator>
   );
 };
+
+export default AuthNavigator;

@@ -6,7 +6,7 @@ import { ThemedText } from '@/app/src/components/ThemedText';
 import { ThemedView } from '@/app/src/components/ThemedView';
 import { Colors } from '@/app/src/constants/Colors';
 
-export function Collapsible({ children, title }: PropsWithChildren & { title: string }) {
+const Collapsible = ({ children, title }: PropsWithChildren & { title: string }) => {
   const [isOpen, setIsOpen] = useState(false);
   const theme = useColorScheme() ?? 'light';
 
@@ -26,7 +26,9 @@ export function Collapsible({ children, title }: PropsWithChildren & { title: st
       {isOpen && <ThemedView style={styles.content}>{children}</ThemedView>}
     </ThemedView>
   );
-}
+};
+
+export default Collapsible;
 
 const styles = StyleSheet.create({
   heading: {

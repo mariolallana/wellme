@@ -5,6 +5,7 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./src/assets/images/favicon.png",
+    "newArchEnabled": true,
     "assetBundlePatterns": [
       "src/assets/**/*"
     ],

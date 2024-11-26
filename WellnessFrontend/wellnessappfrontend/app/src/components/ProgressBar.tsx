@@ -7,7 +7,7 @@ type ProgressBarProps = {
   label: string;
 };
 
-export const ProgressBar: React.FC<ProgressBarProps> = ({ progress, color, label }) => {
+const ProgressBar: React.FC<ProgressBarProps> = ({ progress, color, label }) => {
   // Ensure progress is between 0 and 100
   const clampedProgress = Math.min(Math.max(progress, 0), 100);
   // Format to one decimal place
@@ -23,6 +23,8 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({ progress, color, label
     </View>
   );
 };
+
+export default ProgressBar;
 
 const styles = StyleSheet.create({
   container: {

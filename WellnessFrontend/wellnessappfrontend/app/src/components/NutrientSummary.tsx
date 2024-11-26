@@ -1,6 +1,6 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
-import { SmoothContainer } from './SmoothContainer';
+import { View, Text, StyleSheet, ActivityIndicator } from 'react-native';
+import SmoothContainer from './SmoothContainer';
 
 interface NutrientSummaryProps {
   current: {
@@ -15,38 +15,49 @@ interface NutrientSummaryProps {
     proteins: number;
     fats: number;
   };
+  isLoading?: boolean;
+  title?: string;
 }
 
-export const NutrientSummary = ({ current, goals }: NutrientSummaryProps) => {
-    //console.log('NutrientSummary rendering with props:', { current, goals });
+const NutrientSummary = ({ current, goals, isLoading, title }: NutrientSummaryProps) => {
+  if (isLoading) {
+    return (
+      <SmoothContainer>
+        <ActivityIndicator size="large" color="#4CAF50" />
+      </SmoothContainer>
+    );
+  }
 
+  //console.log('NutrientSummary rendering with props:', { current, goals });
+
+  if (!current || !goals) {
+    // console.warn('NutrientSummary: Missing required props', { current, goals });
+    return null;
+  }
+  
+  const progressValues = React.useMemo(() => {
     if (!current || !goals) {
-        // console.warn('NutrientSummary: Missing required props', { current, goals });
-        return null;
+      //console.warn('Missing current or goals in progressValues calculation');
+      return {
+        carbs: 0,
+        proteins: 0,
+        fats: 0
+      };
     }
     
-    const progressValues = React.useMemo(() => {
-        if (!current || !goals) {
-          //console.warn('Missing current or goals in progressValues calculation');
-          return {
-            carbs: 0,
-            proteins: 0,
-            fats: 0
-          };
-        }
-        
-        const values = {
-          carbs: Math.min((current.carbohydrates / goals.carbohydrates) * 100, 100),
-          proteins: Math.min((current.proteins / goals.proteins) * 100, 100),
-          fats: Math.min((current.fats / goals.fats) * 100, 100)
-        };
-        
-        // console.log('Calculated progress values:', values);
-        return values;
-      }, [current, goals]);
+    const values = {
+      carbs: Math.min((current.carbohydrates / goals.carbohydrates) * 100, 100),
+      proteins: Math.min((current.proteins / goals.proteins) * 100, 100),
+      fats: Math.min((current.fats / goals.fats) * 100, 100)
+    };
+    
+    // console.log('Calculated progress values:', values);
+    return values;
+  }, [current, goals]);
 
   return (
     <SmoothContainer>
+      {title && <Text style={styles.title}>{title}</Text>}
       <View style={styles.calorieInfo}>
         <Text style={styles.calorieTitle}>Total Calories</Text>
         <Text style={styles.calorieValue}>
@@ -113,6 +124,8 @@ export const NutrientSummary = ({ current, goals }: NutrientSummaryProps) => {
   );
 };
 
+export default NutrientSummary;
+
 const styles = StyleSheet.create({
   calorieInfo: {
     alignItems: 'center',
@@ -171,6 +184,11 @@ const styles = StyleSheet.create({
   fatBar: {
     backgroundColor: '#ffeb3b',
   },
+  title: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#666',
+    marginBottom: 8,
+  },
 });
 
-export default NutrientSummary;

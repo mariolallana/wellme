@@ -1,5 +1,6 @@
 import { Types } from 'mongoose';
 import FoodEntry, { IFoodEntry } from '../models/FoodEntry';
+import User from '../models/User';
 
 /**
  * Service handling food tracking operations
@@ -42,6 +43,19 @@ export class FoodTrackingService {
     }).sort({ time: 'asc' });
   }
 
+  private validateNutritionalGoals(goals: any) {
+    if (!goals) return false;
+    
+    const { macronutrientRatios } = goals;
+    if (!macronutrientRatios) return false;
+
+    const { protein, carbs, fats } = macronutrientRatios;
+    const sum = Number(protein) + Number(carbs) + Number(fats);
+    
+    // Allow for small floating-point differences
+    return Math.abs(sum - 1.0) < 0.01;
+  }
+
   /**
    * Calculates total nutrients for all food entries in a day
    * @param userId - The ID of the user
@@ -53,10 +67,17 @@ export class FoodTrackingService {
     carbohydrates: number;
     proteins: number;
     fats: number;
+    goals?: {
+      calories: number;
+      carbohydrates: number;
+      proteins: number;
+      fats: number;
+    }
   }> {
     const entries = await this.getDailyEntries(userId, date);
+    const user = await User.findById(userId);
     
-    return entries.reduce((acc, entry) => ({
+    const totals = entries.reduce((acc, entry) => ({
       calories: acc.calories + (entry.calories || 0),
       carbohydrates: acc.carbohydrates + (entry.carbohydrates || 0),
       proteins: acc.proteins + (entry.proteins || 0),
@@ -67,6 +88,26 @@ export class FoodTrackingService {
       proteins: 0,
       fats: 0,
     });
+
+    let goals;
+    if (user?.nutritionalGoals && this.validateNutritionalGoals(user.nutritionalGoals)) {
+      goals = {
+        calories: user.nutritionalGoals.dailyCalories,
+        carbohydrates: (user.nutritionalGoals.dailyCalories * user.nutritionalGoals.macronutrientRatios.carbs) / 4,
+        proteins: (user.nutritionalGoals.dailyCalories * user.nutritionalGoals.macronutrientRatios.protein) / 4,
+        fats: (user.nutritionalGoals.dailyCalories * user.nutritionalGoals.macronutrientRatios.fats) / 9,
+      };
+    } else {
+      // Default goals if invalid or missing
+      goals = {
+        calories: 2000,
+        carbohydrates: 250,
+        proteins: 150,
+        fats: 65
+      };
+    }
+
+    return { ...totals, goals };
   }
 
   /**

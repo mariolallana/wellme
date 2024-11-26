@@ -1,9 +1,9 @@
 import React, { useEffect } from 'react';
-import { RootNavigator } from './src/navigation/RootNavigator';
+import RootNavigator from './src/navigation/RootNavigator';
 import { DarkTheme, DefaultTheme, NavigationContainer, ThemeProvider } from '@react-navigation/native';
 import { useFonts } from 'expo-font';
 import * as SplashScreen from 'expo-splash-screen';
-import { useColorScheme } from '@/app/src/hooks/useColorScheme';
+import useColorScheme from './src/hooks/useColorScheme';
 import { AuthProvider } from './src/context/AuthContext';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 

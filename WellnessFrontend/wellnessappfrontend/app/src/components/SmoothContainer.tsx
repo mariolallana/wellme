@@ -6,11 +6,13 @@ type SmoothContainerProps = {
   style?: ViewStyle;
 };
 
-export const SmoothContainer: React.FC<SmoothContainerProps> = ({ children, style }) => (
+const SmoothContainer: React.FC<SmoothContainerProps> = ({ children, style }) => (
   <View style={[styles.container, style]}>
     {children}
   </View>
 );
+
+export default SmoothContainer;
 
 const styles = StyleSheet.create({
   container: {

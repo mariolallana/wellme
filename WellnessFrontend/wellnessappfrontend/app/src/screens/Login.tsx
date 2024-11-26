@@ -16,7 +16,7 @@ import { AuthService } from '../services/api/auth.service';
 import { useAuth } from '../context/AuthContext';
 import { mapLoginResponseToUserProfile } from '../utils/mappers';
 
-export const Login = ({ navigation }: AuthStackScreenProps<'Login'>) => {
+const Login = ({ navigation }: AuthStackScreenProps<'Login'>) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -94,6 +94,8 @@ export const Login = ({ navigation }: AuthStackScreenProps<'Login'>) => {
     </SafeAreaView>
   );
 };
+
+export default Login;
 
 const styles = StyleSheet.create({
     container: {

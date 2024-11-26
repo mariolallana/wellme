@@ -17,7 +17,7 @@ interface CustomButtonProps {
   isLoading?: boolean;
 }
 
-export const CustomButton: React.FC<CustomButtonProps> = ({ 
+const CustomButton: React.FC<CustomButtonProps> = ({ 
   title, 
   onPress, 
   color = '#4CAF50',
@@ -42,6 +42,8 @@ export const CustomButton: React.FC<CustomButtonProps> = ({
       )}
   </TouchableOpacity>
 );
+
+export default CustomButton;
 
 const styles = StyleSheet.create({
   button: {

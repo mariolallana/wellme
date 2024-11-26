@@ -3,6 +3,7 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import User from '../models/User';
 import { AuthRequest } from '../middleware/auth';
+import { NutrientCalculatorService } from '../services/nutrientCalculator.service';
 
 // Register User
 export const register = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
@@ -137,13 +138,23 @@ export const saveOnboardingProfile = async (req: AuthRequest, res: Response, nex
       return;
     }
 
-    const { username, age, gender, weight, height, goal, activityLevel } = req.body;
+    const {
+      name,
+      age,
+      gender,
+      weight,
+      height,
+      goal,
+      activityLevel,
+      dietaryPreferences,
+      nutritionalGoals
+    } = req.body;
 
     const user = await User.findByIdAndUpdate(
       userId,
       {
-        username,
         profile: {
+          name,
           age: Number(age),
           gender,
           weight: Number(weight),
@@ -151,7 +162,16 @@ export const saveOnboardingProfile = async (req: AuthRequest, res: Response, nex
           goal,
           activityLevel,
           onboardingCompleted: true
-        }
+        },
+        nutritionalGoals: {
+          dailyCalories: Number(nutritionalGoals.dailyCalories),
+          macronutrientRatios: {
+            protein: Number(nutritionalGoals.macronutrientRatios.protein),
+            carbs: Number(nutritionalGoals.macronutrientRatios.carbs),
+            fats: Number(nutritionalGoals.macronutrientRatios.fats)
+          }
+        },
+        dietaryPreferences
       },
       { new: true, runValidators: true }
     ).select('-password');
@@ -161,8 +181,96 @@ export const saveOnboardingProfile = async (req: AuthRequest, res: Response, nex
       return;
     }
 
-    res.json(user);
+    res.json({
+      success: true,
+      data: {
+        profile: user
+      }
+    });
   } catch (error) {
-    next(error);
+    console.error('Onboarding error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to save profile'
+    });
+  }
+};
+
+export const handleOnboarding = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) {
+      res.status(401).json({ message: 'User not authenticated' });
+      return;
+    }
+
+    const {
+      name,
+      age,
+      gender,
+      weight,
+      height,
+      goal,
+      activityLevel,
+      dietaryPreferences
+    } = req.body;
+
+    // Calculate nutrient needs using the service
+    const calculatedNeeds = NutrientCalculatorService.calculateDailyNeeds({
+      age: Number(age),
+      gender,
+      weight: Number(weight),
+      height: Number(height),
+      goal,
+      activityLevel,
+      dietaryPreferences
+    });
+
+    // Update user with calculated nutrients and profile data
+    const user = await User.findByIdAndUpdate(
+      userId,
+      {
+        profile: {
+          name,
+          age: Number(age),
+          gender,
+          weight: Number(weight),
+          height: Number(height),
+          goal,
+          activityLevel,
+          onboardingCompleted: true
+        },
+        nutritionalGoals: {
+          dailyCalories: calculatedNeeds.calories,
+          macronutrientRatios: {
+            protein: calculatedNeeds.proteins * 4 / calculatedNeeds.calories,
+            carbs: calculatedNeeds.carbohydrates * 4 / calculatedNeeds.calories,
+            fats: calculatedNeeds.fats * 9 / calculatedNeeds.calories
+          }
+        },
+        dietaryPreferences
+      },
+      { new: true, runValidators: true }
+    ).select('-password');
+
+    if (!user) {
+      res.status(404).json({ message: 'User not found' });
+      return;
+    }
+
+    res.json({
+      success: true,
+      data: {
+        profile: user.profile,
+        nutritionalGoals: user.nutritionalGoals,
+        dietaryPreferences: user.dietaryPreferences
+      }
+    });
+  } catch (error) {
+    console.error('Onboarding error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to process onboarding data'
+    });
   }
 };

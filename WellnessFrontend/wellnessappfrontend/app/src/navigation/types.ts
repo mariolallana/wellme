@@ -8,6 +8,7 @@ export type RootStackParamList = {
   Onboarding: undefined; // Add other screens as needed
   MainTabs: undefined; // Add other screens as needed
   AsyncStorageTest: undefined; // Add this line
+  NutritionPreferences: undefined;
 };
 
 export type AuthStackParamList = {
