@@ -15,6 +15,7 @@ export class FoodTrackingService {
   async addFoodEntry(userId: string, foodData: Partial<IFoodEntry>): Promise<IFoodEntry> {
     const newEntry = new FoodEntry({
       userId: new Types.ObjectId(userId),
+      name: foodData.foodLabel || foodData.name, // Use foodLabel as name if name is not provided
       ...foodData,
       time: foodData.time || new Date(), // Default to current time if not provided
     });

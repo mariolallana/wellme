@@ -17,7 +17,7 @@ const MainTabNavigator = () => {
   return (
     <>
       <View style={{ flex: 1 }}>
-        <LogoutButton />
+        {/* <LogoutButton /> */}
         <Tab.Navigator
           screenOptions={{
             tabBarStyle: {
